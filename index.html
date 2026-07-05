@@ -448,20 +448,63 @@ window.saveApiKey = async function(){
 async function generateGeminiAnalysis(promptText, attachments) {
     if(!genAI) return null; 
     
-    const parts = [{ text: promptText }];
+    // Build context from the last 4 messages for conversational memory
+    let historyContext = "";
+    const recentHistory = chatHistory.slice(-4);
+    for(const msg of recentHistory) {
+        if(msg.role === 'user') historyContext += `User: ${msg.content}\n`;
+        else historyContext += `Apex Bro: ${msg.content}\n`;
+    }
+    
+    let finalPrompt = promptText;
+    if(historyContext.length > 0) {
+        finalPrompt = `[Previous Conversation Context]:\n${historyContext}\n\n[New User Message]:\n${promptText}`;
+    }
+
+    const parts = [{ text: finalPrompt }];
     for(const att of attachments) {
         if(att.isImage && att.data) parts.push({ inlineData: { data: att.data.split(',')[1], mimeType: att.type } });
         else if (att.extractedText) parts.push({ text: `\n\n--- Document: ${att.name} ---\n${att.extractedText}\n--- End Document ---` });
     }
 
-    try {
-        const tempModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: SYSTEM_PROMPT });
-        const result = await tempModel.generateContent(parts);
-        return result.response.text().replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/```$/, '');
-    } catch(err) {
-        console.warn("Gemini Error:", err);
-        return null;
+    const modelsToTry = [
+        { name: "gemini-1.5-flash", config: { systemInstruction: SYSTEM_PROMPT } },
+        { name: "gemini-1.5-pro", config: { systemInstruction: SYSTEM_PROMPT } },
+        { name: "gemini-pro", config: {} }
+    ];
+
+    let lastErr = null;
+    for(const m of modelsToTry) {
+        try {
+            let finalParts = [...parts];
+            if(m.name === "gemini-pro") {
+                // gemini-pro (1.0) doesn't support systemInstruction directly in the same way, nor images
+                finalParts = [{ text: "SYSTEM INSTRUCTION: " + SYSTEM_PROMPT + "\n\n" + finalPrompt }];
+                if(attachments.some(a => a.isImage)) continue; // Skip gemini-pro if there are images
+                for(const att of attachments) {
+                    if (att.extractedText) finalParts[0].text += `\n\n--- Document: ${att.name} ---\n${att.extractedText}`;
+                }
+            }
+
+            const tempModel = genAI.getGenerativeModel({ model: m.name, ...m.config });
+            const result = await tempModel.generateContent(finalParts);
+            geminiModel = tempModel;
+            return result.response.text().replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/```$/, '');
+        } catch(err) {
+            lastErr = err;
+            console.warn(`Model ${m.name} failed:`, err);
+        }
     }
+    
+    // If we get here, all models failed.
+    const errMessage = lastErr ? lastErr.message.toLowerCase() : "";
+    if(errMessage.includes("403") || errMessage.includes("api_key_invalid") || errMessage.includes("not found")) {
+        return `<div class="danger-box"><h4>API Key Error</h4><p>Your Gemini API key is either invalid, or your Google Cloud project does not have access to the Gemini 1.5 models. Please generate a new key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:white;text-decoration:underline">Google AI Studio</a>.</p></div>`;
+    }
+    
+    // Return null to trigger the offline fallback engine for generic errors
+    console.error("All Gemini models failed. Falling back to offline engine.");
+    return null; 
 }
 
 function initGoogleSignIn() {
