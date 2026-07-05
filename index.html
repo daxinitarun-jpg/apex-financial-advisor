@@ -537,8 +537,20 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
     let chatHistory=[],isProcessing=false,pendingAttachments=[];
     const chatMessages=document.getElementById('chat-messages'),userInput=document.getElementById('user-input'),welcomeScreen=document.getElementById('welcome-screen'),sendBtn=document.getElementById('btn-send');
     
-    function initGemini(){
+    async function initGemini(){
         const savedKey = localStorage.getItem(API_KEY_STORAGE);
+        
+        // Dynamically load SDK if importmap failed
+        if(!window.GoogleGenerativeAI && savedKey) {
+            try {
+                const module = await import('https://esm.run/@google/generative-ai');
+                window.GoogleGenerativeAI = module.GoogleGenerativeAI;
+            } catch(e) {
+                console.error("Failed to dynamically load Gemini SDK:", e);
+                return false;
+            }
+        }
+
         if(savedKey && window.GoogleGenerativeAI){
             try{
                 genAI = new window.GoogleGenerativeAI(savedKey);
@@ -550,19 +562,22 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
                 return true;
             }catch(e){
                 console.error('Gemini Init Error:', e);
-                localStorage.removeItem(API_KEY_STORAGE);
             }
         }
         if(!savedKey) document.getElementById('api-key-modal').classList.add('visible');
         return false;
     }
 
-    window.saveApiKey = function(){
+    window.saveApiKey = async function(){
         const input = document.getElementById('api-key-input').value.trim();
         if(input.length > 20){
             localStorage.setItem(API_KEY_STORAGE, input);
-            if(initGemini()){
+            document.getElementById('api-key-modal').classList.remove('visible');
+            const success = await initGemini();
+            if(success){
                 addMessage("Gemini API connected successfully!", false);
+            } else {
+                addMessage("Warning: Connected, but the AI module is still initializing.", false);
             }
         }
     };
