@@ -814,6 +814,9 @@ async function handleFileSelect(e){
         } else if(isPdf && typeof pdfjsLib!=='undefined'){
             pendingAttachments.push(att);
             renderAttachmentPreviews();
+            isProcessing=true;
+            sendBtn.disabled=true;
+            addTyping();
             const reader=new FileReader();
             reader.onload=async (evt)=>{
                 try{
@@ -827,12 +830,20 @@ async function handleFileSelect(e){
                         fullText+=textContent.items.map(item=>item.str).join(' ')+' \n';
                     }
                     att.extractedText=fullText;
-                }catch(err){console.error('PDF parse error:',err)}
+                }catch(err){
+                    console.error('PDF parse error:',err);
+                    addMessage("Failed to parse PDF. Please try again.", false);
+                }finally{
+                    isProcessing=false;
+                    sendBtn.disabled=false;
+                    removeTyping();
+                }
             };
             reader.readAsArrayBuffer(file);
         } else {
-            pendingAttachments.push(att);
-            renderAttachmentPreviews();
+            const reader=new FileReader();
+            reader.onload=(evt)=>{att.extractedText=evt.target.result;pendingAttachments.push(att);renderAttachmentPreviews()};
+            reader.readAsText(file);
         }
     }
     e.target.value='';
