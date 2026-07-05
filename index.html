@@ -235,6 +235,17 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
 .send-btn:hover{box-shadow:0 4px 16px rgba(99,102,241,0.4);transform:scale(1.05)}
 .send-btn:active{transform:scale(0.95)}
 .input-disclaimer{font-size:0.7rem;color:var(--text-muted);text-align:center;margin-top:10px}
+.attach-btn{width:42px;height:42px;border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--transition-fast)}
+.attach-btn:hover{color:var(--text-primary);background:var(--surface-glass-hover)}
+.attachment-preview-container{display:flex;gap:10px;padding:0 20px 10px;overflow-x:auto;max-height:100px;scrollbar-width:thin}
+.attachment-preview{position:relative;width:60px;height:60px;border-radius:var(--radius-sm);background:var(--bg-elevated);border:1px solid var(--border-default);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;animation:fadeIn 0.2s}
+.attachment-preview img{width:100%;height:100%;object-fit:cover}
+.attachment-preview .file-icon{font-size:1.5rem;color:var(--accent-primary)}
+.remove-attachment{position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,0.7);color:white;border:none;border-radius:50%;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.remove-attachment:hover{background:rgba(0,0,0,0.9)}
+.message-attachments{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.msg-attachment-img{max-width:200px;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);object-fit:cover}
+.msg-attachment-file{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.15);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-primary)}
 .hidden{display:none!important}
 .separator{height:1px;background:linear-gradient(90deg,transparent,var(--border-default),transparent);margin:8px 0}
 @media(max-width:768px){.sidebar{position:fixed;left:0;top:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0);box-shadow:20px 0 60px rgba(0,0,0,0.5)}.sidebar-toggle{display:flex}.chat-header{padding-left:68px}.chat-input-wrapper{padding:12px 16px 16px}.message{padding:6px 16px}.welcome-cards{grid-template-columns:1fr}.welcome-title{font-size:1.4rem}}
@@ -354,7 +365,16 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
             </div>
         </div>
         <div class="chat-input-wrapper">
-            <div class="chat-input-container"><div class="input-glow"></div><textarea id="user-input" class="chat-input" placeholder="Enter your financial data or ask a question..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea><button id="btn-send" class="send-btn" onclick="sendMessage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg></button></div>
+            <div id="attachment-preview-area" class="attachment-preview-container hidden"></div>
+            <div class="chat-input-container">
+                <div class="input-glow"></div>
+                <input type="file" id="file-upload" class="hidden" multiple onchange="handleFileSelect(event)">
+                <button class="attach-btn" onclick="document.getElementById('file-upload').click()" title="Attach file or photo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <textarea id="user-input" class="chat-input" placeholder="Enter your financial data or ask a question..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                <button id="btn-send" class="send-btn" onclick="sendMessage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg></button>
+            </div>
             <p class="input-disclaimer">Apex Financial Advisor · Free · Verify with a qualified professional</p>
         </div>
     </main>
@@ -564,7 +584,7 @@ function incrementAnalysis(){analysisCount++;if(currentUser){const u=getUsers();
 })();
 
 /* ====== CHAT ENGINE ====== */
-let chatHistory=[],isProcessing=false;
+let chatHistory=[],isProcessing=false,pendingAttachments=[];
 const chatMessages=document.getElementById('chat-messages'),userInput=document.getElementById('user-input'),welcomeScreen=document.getElementById('welcome-screen'),sendBtn=document.getElementById('btn-send');
 function getTimestamp(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
 function escapeHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
@@ -587,10 +607,30 @@ function answerConcept(q){const c={'gross margin':{t:'Gross Margin',f:'(Revenue-
 
 function useTemplate(t){const m={'health-check':'Revenue: $\nCOGS: $\nOperating Expenses: $\nCash Balance: $','ratio-analysis':'Revenue: $\nNet Income: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $','cash-flow':'Cash Balance: $\nMonthly Revenue: $\nMonthly Expenses: $','scenario':'Revenue: $50K\nCOGS: $20K\nOpex: $25K\n\nWhat if revenue increases by 20%?','cost-reduction':'Revenue: $\nCOGS: $\nOperating Expenses: $\nEmployees: \nMonthly Burn: $','compliance':'Revenue: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $'};userInput.value=m[t]||'';userInput.focus();autoResize(userInput);document.getElementById('sidebar').classList.remove('open')}
 
-function addMessage(c,isUser=false){if(welcomeScreen)welcomeScreen.classList.add('hidden');const d=document.createElement('div');d.className=`message ${isUser?'message-user':'message-ai'}`;let avatarHTML='◆';if(isUser){if(currentUser&&currentUser.picture)avatarHTML=`<img src="${currentUser.picture}" alt="">`;else if(currentUser)avatarHTML=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);else avatarHTML='👤'}d.innerHTML=`<div class="message-avatar">${avatarHTML}</div><div class="message-content"><div class="message-bubble">${isUser?escapeHtml(c):c}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;chatMessages.appendChild(d);scrollToBottom()}
+function handleFileSelect(e){
+    const files=Array.from(e.target.files);
+    files.forEach(file=>{
+        const reader=new FileReader();
+        reader.onload=(evt)=>{
+            pendingAttachments.push({name:file.name,type:file.type,data:evt.target.result,isImage:file.type.startsWith('image/')});
+            renderAttachmentPreviews();
+        };
+        reader.readAsDataURL(file);
+    });
+    e.target.value='';
+}
+function removeAttachment(index){pendingAttachments.splice(index,1);renderAttachmentPreviews()}
+function renderAttachmentPreviews(){
+    const area=document.getElementById('attachment-preview-area');
+    if(pendingAttachments.length===0){area.classList.add('hidden');area.innerHTML='';return}
+    area.classList.remove('hidden');
+    area.innerHTML=pendingAttachments.map((att,i)=>`<div class="attachment-preview">${att.isImage?`<img src="${att.data}" alt="preview">`:`<div class="file-icon">📄</div>`}<button class="remove-attachment" onclick="removeAttachment(${i})">✕</button></div>`).join('');
+}
+
+function addMessage(c,isUser=false,attachments=[]){if(welcomeScreen)welcomeScreen.classList.add('hidden');const d=document.createElement('div');d.className=`message ${isUser?'message-user':'message-ai'}`;let avatarHTML='◆';if(isUser){if(currentUser&&currentUser.picture)avatarHTML=`<img src="${currentUser.picture}" alt="">`;else if(currentUser)avatarHTML=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);else avatarHTML='👤'}let attachHTML='';if(attachments&&attachments.length>0){attachHTML=`<div class="message-attachments">`+attachments.map(a=>a.isImage?`<img src="${a.data}" class="msg-attachment-img">`:`<div class="msg-attachment-file">📄 ${escapeHtml(a.name)}</div>`).join('')+`</div>`}d.innerHTML=`<div class="message-avatar">${avatarHTML}</div><div class="message-content"><div class="message-bubble">${attachHTML}${isUser?escapeHtml(c):c}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;chatMessages.appendChild(d);scrollToBottom()}
 function addTyping(){const d=document.createElement('div');d.className='message message-ai';d.id='typing-indicator';d.innerHTML=`<div class="message-avatar">◆</div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;chatMessages.appendChild(d);scrollToBottom()}
 function removeTyping(){const e=document.getElementById('typing-indicator');if(e)e.remove()}
-async function sendMessage(){const t=userInput.value.trim();if(!t||isProcessing)return;isProcessing=true;sendBtn.disabled=true;addMessage(t,true);chatHistory.push({role:'user',content:t});userInput.value='';autoResize(userInput);addTyping();await new Promise(r=>setTimeout(r,600+Math.random()*800));const resp=generateAnalysis(t);removeTyping();addMessage(resp,false);chatHistory.push({role:'assistant',content:resp});isProcessing=false;sendBtn.disabled=false;userInput.focus()}
+async function sendMessage(){const t=userInput.value.trim();if((!t&&pendingAttachments.length===0)||isProcessing)return;isProcessing=true;sendBtn.disabled=true;const atts=[...pendingAttachments];addMessage(t,true,atts);chatHistory.push({role:'user',content:t,attachments:atts});userInput.value='';pendingAttachments=[];renderAttachmentPreviews();autoResize(userInput);addTyping();await new Promise(r=>setTimeout(r,600+Math.random()*800));const resp=generateAnalysis(t+(atts.length?' [User attached files]':''));removeTyping();addMessage(resp,false);chatHistory.push({role:'assistant',content:resp});isProcessing=false;sendBtn.disabled=false;userInput.focus()}
 function handleKeyDown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
 function startNewChat(){chatHistory=[];chatMessages.innerHTML='';if(welcomeScreen){chatMessages.appendChild(welcomeScreen);welcomeScreen.classList.remove('hidden')}userInput.value='';userInput.focus()}
 function clearChat(){startNewChat()}
