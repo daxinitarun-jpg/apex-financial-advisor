@@ -11,6 +11,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><path d='M14 2L26 8V20L14 26L2 20V8L14 2Z' stroke='%236366f1' stroke-width='2' fill='none'/><path d='M14 8L20 11V17L14 20L8 17V11L14 8Z' fill='%238b5cf6' opacity='0.6'/></svg>">
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- PDF.js for parsing PDF attachments -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root {
     --bg-primary: #0a0a0f; --bg-secondary: #111118; --bg-tertiary: #16161f;
@@ -607,16 +609,41 @@ function answerConcept(q){const c={'gross margin':{t:'Gross Margin',f:'(Revenue-
 
 function useTemplate(t){const m={'health-check':'Revenue: $\nCOGS: $\nOperating Expenses: $\nCash Balance: $','ratio-analysis':'Revenue: $\nNet Income: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $','cash-flow':'Cash Balance: $\nMonthly Revenue: $\nMonthly Expenses: $','scenario':'Revenue: $50K\nCOGS: $20K\nOpex: $25K\n\nWhat if revenue increases by 20%?','cost-reduction':'Revenue: $\nCOGS: $\nOperating Expenses: $\nEmployees: \nMonthly Burn: $','compliance':'Revenue: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $'};userInput.value=m[t]||'';userInput.focus();autoResize(userInput);document.getElementById('sidebar').classList.remove('open')}
 
-function handleFileSelect(e){
+async function handleFileSelect(e){
     const files=Array.from(e.target.files);
-    files.forEach(file=>{
-        const reader=new FileReader();
-        reader.onload=(evt)=>{
-            pendingAttachments.push({name:file.name,type:file.type,data:evt.target.result,isImage:file.type.startsWith('image/')});
+    for(const file of files){
+        const isImage=file.type.startsWith('image/');
+        const isPdf=file.type==='application/pdf';
+        const att={name:file.name,type:file.type,isImage,data:'',extractedText:''};
+        
+        if(isImage){
+            const reader=new FileReader();
+            reader.onload=(evt)=>{att.data=evt.target.result;pendingAttachments.push(att);renderAttachmentPreviews()};
+            reader.readAsDataURL(file);
+        } else if(isPdf && typeof pdfjsLib!=='undefined'){
+            pendingAttachments.push(att);
             renderAttachmentPreviews();
-        };
-        reader.readAsDataURL(file);
-    });
+            const reader=new FileReader();
+            reader.onload=async (evt)=>{
+                try{
+                    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    const typedarray=new Uint8Array(evt.target.result);
+                    const pdf=await pdfjsLib.getDocument(typedarray).promise;
+                    let fullText='';
+                    for(let i=1;i<=pdf.numPages;i++){
+                        const page=await pdf.getPage(i);
+                        const textContent=await page.getTextContent();
+                        fullText+=textContent.items.map(item=>item.str).join(' ')+' \n';
+                    }
+                    att.extractedText=fullText;
+                }catch(err){console.error('PDF parse error:',err)}
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            pendingAttachments.push(att);
+            renderAttachmentPreviews();
+        }
+    }
     e.target.value='';
 }
 function removeAttachment(index){pendingAttachments.splice(index,1);renderAttachmentPreviews()}
@@ -630,7 +657,25 @@ function renderAttachmentPreviews(){
 function addMessage(c,isUser=false,attachments=[]){if(welcomeScreen)welcomeScreen.classList.add('hidden');const d=document.createElement('div');d.className=`message ${isUser?'message-user':'message-ai'}`;let avatarHTML='◆';if(isUser){if(currentUser&&currentUser.picture)avatarHTML=`<img src="${currentUser.picture}" alt="">`;else if(currentUser)avatarHTML=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);else avatarHTML='👤'}let attachHTML='';if(attachments&&attachments.length>0){attachHTML=`<div class="message-attachments">`+attachments.map(a=>a.isImage?`<img src="${a.data}" class="msg-attachment-img">`:`<div class="msg-attachment-file">📄 ${escapeHtml(a.name)}</div>`).join('')+`</div>`}d.innerHTML=`<div class="message-avatar">${avatarHTML}</div><div class="message-content"><div class="message-bubble">${attachHTML}${isUser?escapeHtml(c):c}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;chatMessages.appendChild(d);scrollToBottom()}
 function addTyping(){const d=document.createElement('div');d.className='message message-ai';d.id='typing-indicator';d.innerHTML=`<div class="message-avatar">◆</div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;chatMessages.appendChild(d);scrollToBottom()}
 function removeTyping(){const e=document.getElementById('typing-indicator');if(e)e.remove()}
-async function sendMessage(){const t=userInput.value.trim();if((!t&&pendingAttachments.length===0)||isProcessing)return;isProcessing=true;sendBtn.disabled=true;const atts=[...pendingAttachments];addMessage(t,true,atts);chatHistory.push({role:'user',content:t,attachments:atts});userInput.value='';pendingAttachments=[];renderAttachmentPreviews();autoResize(userInput);addTyping();await new Promise(r=>setTimeout(r,600+Math.random()*800));const resp=generateAnalysis(t+(atts.length?' [User attached files]':''));removeTyping();addMessage(resp,false);chatHistory.push({role:'assistant',content:resp});isProcessing=false;sendBtn.disabled=false;userInput.focus()}
+async function sendMessage(){
+    const t=userInput.value.trim();
+    if((!t&&pendingAttachments.length===0)||isProcessing)return;
+    isProcessing=true;sendBtn.disabled=true;
+    const atts=[...pendingAttachments];
+    addMessage(t,true,atts);
+    chatHistory.push({role:'user',content:t,attachments:atts});
+    userInput.value='';pendingAttachments=[];renderAttachmentPreviews();autoResize(userInput);
+    addTyping();
+    await new Promise(r=>setTimeout(r,600+Math.random()*800));
+    let fullInput=t;
+    for(const a of atts){if(a.extractedText)fullInput+='\n\n[Data from '+a.name+']:\n'+a.extractedText}
+    if(!fullInput.trim() && atts.length) fullInput = 'I have attached some files but provided no text.';
+    const resp=generateAnalysis(fullInput);
+    removeTyping();
+    addMessage(resp,false);
+    chatHistory.push({role:'assistant',content:resp});
+    isProcessing=false;sendBtn.disabled=false;userInput.focus();
+}
 function handleKeyDown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
 function startNewChat(){chatHistory=[];chatMessages.innerHTML='';if(welcomeScreen){chatMessages.appendChild(welcomeScreen);welcomeScreen.classList.remove('hidden')}userInput.value='';userInput.focus()}
 function clearChat(){startNewChat()}
