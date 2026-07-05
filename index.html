@@ -499,12 +499,12 @@ async function generateGeminiAnalysis(promptText, attachments) {
     // If we get here, all models failed.
     const errMessage = lastErr ? lastErr.message.toLowerCase() : "";
     if(errMessage.includes("403") || errMessage.includes("api_key_invalid") || errMessage.includes("not found")) {
-        return `<div class="danger-box"><h4>API Key Error</h4><p>Your Gemini API key is either invalid, or your Google Cloud project does not have access to the Gemini 1.5 models. Please generate a new key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:white;text-decoration:underline">Google AI Studio</a>.</p></div>`;
+        return `<div class="danger-box"><h4>API KEY ERROR</h4><p>Your Gemini API key was rejected by Google.</p><p style="font-family:monospace;font-size:0.8rem;background:rgba(0,0,0,0.2);padding:10px;border-radius:4px;margin-top:10px">${lastErr.message}</p><p style="margin-top:10px">Please generate a new key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:white;text-decoration:underline">Google AI Studio</a>. If you are in a restricted region, you may need to use a VPN.</p></div>`;
     }
     
     // Return null to trigger the offline fallback engine for generic errors
-    console.error("All Gemini models failed. Falling back to offline engine.");
-    return null; 
+    console.error("All Gemini models failed. Falling back to offline engine.", lastErr);
+    return `<div class="danger-box"><h4>UNKNOWN API ERROR</h4><p>Google's servers rejected the request.</p><p style="font-family:monospace;font-size:0.8rem;background:rgba(0,0,0,0.2);padding:10px;border-radius:4px;margin-top:10px">${lastErr ? lastErr.message : 'Unknown Error'}</p></div>`;
 }
 
 function initGoogleSignIn() {
