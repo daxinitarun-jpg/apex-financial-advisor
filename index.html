@@ -534,13 +534,11 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
     let genAI = null;
     let geminiModel = null;
     const API_KEY_STORAGE = 'afa_gemini_key';
-    let chatHistory=[],isProcessing=false,pendingAttachments=[];
-    const chatMessages=document.getElementById('chat-messages'),userInput=document.getElementById('user-input'),welcomeScreen=document.getElementById('welcome-screen'),sendBtn=document.getElementById('btn-send');
-    
+    const SYSTEM_PROMPT = "You are Apex Bro, a highly capable financial advisor AI. You provide clear, concise, and professional financial analysis. If the user provides financial data, format your response beautifully using HTML tags like <h3>, <table>, <tr>, <th>, <td>, and highlight boxes using classes like 'recommendation-box', 'success-box', 'warning-box', or 'danger-box'. Only use inline CSS or HTML. NEVER use Markdown. Do not include markdown code block syntax (like ```html). Just output raw HTML that can be inserted directly into a <div>. Focus on profitability, ratios, margins, and actionable advice. Never give investment advice.";
+
     async function initGemini(){
         const savedKey = localStorage.getItem(API_KEY_STORAGE);
         
-        // Dynamically load SDK if importmap failed
         if(!window.GoogleGenerativeAI && savedKey) {
             try {
                 const module = await import('https://esm.run/@google/generative-ai');
@@ -552,17 +550,9 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
         }
 
         if(savedKey && window.GoogleGenerativeAI){
-            try{
-                genAI = new window.GoogleGenerativeAI(savedKey);
-                geminiModel = genAI.getGenerativeModel({ 
-                    model: "gemini-1.5-flash",
-                    systemInstruction: "You are Apex Bro, a highly capable financial advisor AI. You provide clear, concise, and professional financial analysis. If the user provides financial data, format your response beautifully using HTML tags like <h3>, <table>, <tr>, <th>, <td>, and highlight boxes using classes like 'recommendation-box', 'success-box', 'warning-box', or 'danger-box'. Only use inline CSS or HTML. NEVER use Markdown. Do not include markdown code block syntax (like ```html). Just output raw HTML that can be inserted directly into a <div>. Focus on profitability, ratios, margins, and actionable advice. Never give investment advice."
-                });
-                document.getElementById('api-key-modal').classList.remove('visible');
-                return true;
-            }catch(e){
-                console.error('Gemini Init Error:', e);
-            }
+            genAI = new window.GoogleGenerativeAI(savedKey);
+            document.getElementById('api-key-modal').classList.remove('visible');
+            return true;
         }
         if(!savedKey) document.getElementById('api-key-modal').classList.add('visible');
         return false;
@@ -574,44 +564,54 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
             localStorage.setItem(API_KEY_STORAGE, input);
             document.getElementById('api-key-modal').classList.remove('visible');
             const success = await initGemini();
-            if(success){
-                addMessage("Gemini API connected successfully!", false);
-            } else {
-                addMessage("Warning: Connected, but the AI module is still initializing.", false);
-            }
+            if(success) addMessage("Gemini API connected successfully!", false);
+            else addMessage("Warning: Connected, but the AI module is still initializing.", false);
         }
     };
-
-    window.onload=function(){
-        initGoogleSignIn();
-        const s=getSession();if(s){const u=getUsers();if(u[s.email])loginUser(u[s.email])}
-        updateUserUI();
-        initGemini();
-    };
-
-    function getTimestamp(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
-    function escapeHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
-    function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,150)+'px'}
-    function scrollToBottom(){chatMessages.scrollTo({top:chatMessages.scrollHeight,behavior:'smooth'})}
-    function addMessage(c,isUser=false,attachments=[]){if(welcomeScreen)welcomeScreen.classList.add('hidden');const d=document.createElement('div');d.className=`message ${isUser?'message-user':'message-ai'}`;let avatarHTML='◆';if(isUser){if(currentUser&&currentUser.picture)avatarHTML=`<img src="${currentUser.picture}" alt="">`;else if(currentUser)avatarHTML=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);else avatarHTML='👤'}let attachHTML='';if(attachments&&attachments.length>0){attachHTML=`<div class="message-attachments">`+attachments.map(a=>a.isImage?`<img src="${a.data}" class="msg-attachment-img">`:`<div class="msg-attachment-file">📄 ${escapeHtml(a.name)}</div>`).join('')+`</div>`}d.innerHTML=`<div class="message-avatar">${avatarHTML}</div><div class="message-content"><div class="message-bubble">${attachHTML}${isUser?escapeHtml(c):c}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;chatMessages.appendChild(d);scrollToBottom()}
-    function addTyping(){const d=document.createElement('div');d.className='message message-ai';d.id='typing-indicator';d.innerHTML=`<div class="message-avatar">◆</div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;chatMessages.appendChild(d);scrollToBottom()}
-    function removeTyping(){const e=document.getElementById('typing-indicator');if(e)e.remove()}
 
     function base64ToGenerativePart(base64Data, mimeType) {
         return { inlineData: { data: base64Data.split(',')[1], mimeType } };
     }
 
     async function generateGeminiAnalysis(promptText, attachments) {
-        if(!geminiModel) { document.getElementById('api-key-modal').classList.add('visible'); return "Please connect your Gemini API key first."; }
-        try {
-            const parts = [promptText];
-            for(const att of attachments) {
-                if(att.isImage && att.data) parts.push(base64ToGenerativePart(att.data, att.type));
-                else if (att.extractedText) parts.push(`\n\n--- Document: ${att.name} ---\n${att.extractedText}\n--- End Document ---`);
+        if(!genAI) { document.getElementById('api-key-modal').classList.add('visible'); return "Please connect your Gemini API key first."; }
+        
+        const parts = [{ text: promptText }];
+        for(const att of attachments) {
+            if(att.isImage && att.data) parts.push(base64ToGenerativePart(att.data, att.type));
+            else if (att.extractedText) parts.push({ text: `\n\n--- Document: ${att.name} ---\n${att.extractedText}\n--- End Document ---` });
+        }
+
+        const modelsToTry = [
+            { name: "gemini-1.5-flash", config: { systemInstruction: SYSTEM_PROMPT } },
+            { name: "gemini-1.5-flash-latest", config: { systemInstruction: SYSTEM_PROMPT } },
+            { name: "gemini-pro", config: {} } // Fallback to 1.0 Pro which doesn't support systemInstruction in old SDK
+        ];
+
+        let lastErr = null;
+        for(const m of modelsToTry) {
+            try {
+                // If using gemini-pro (1.0), prepend the system prompt as it doesn't support systemInstruction natively
+                let finalParts = [...parts];
+                if(m.name === "gemini-pro") {
+                    finalParts = [{ text: "SYSTEM INSTRUCTION: " + SYSTEM_PROMPT + "\n\nUSER PROMPT: " }, ...parts];
+                }
+
+                const tempModel = genAI.getGenerativeModel({ model: m.name, ...m.config });
+                const result = await tempModel.generateContent(finalParts);
+                geminiModel = tempModel; // Save the working model so we don't loop next time
+                return result.response.text().replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/```$/, '');
+            } catch(err) {
+                lastErr = err;
+                console.warn(`Model ${m.name} failed:`, err);
+                if(err.message.includes("403") || err.message.includes("API_KEY_INVALID")) {
+                    return `<div class="danger-box"><h4>Invalid API Key</h4><p>Your API Key is invalid or restricted. Please generate a new one from Google AI Studio.</p></div>`;
+                }
+                // If it's a 404, we just continue to the next model in the loop
             }
-            const result = await geminiModel.generateContent(parts);
-            return result.response.text().replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/```$/, '');
-        } catch(err) { return `<div class="danger-box"><h4>API Error</h4><p>${err.message}</p></div>`; }
+        }
+        
+        return `<div class="danger-box"><h4>API Error</h4><p>${lastErr.message}</p></div>`;
     }
 
     async function sendMessage(){
