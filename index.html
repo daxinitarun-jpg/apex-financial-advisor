@@ -206,6 +206,19 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
 .message-bubble ul,.message-bubble ol{margin:8px 0;padding-left:20px}
 .message-bubble li{margin:4px 0;color:var(--text-secondary)}.message-bubble li strong{color:var(--text-primary)}
 .message-bubble code{font-family:var(--font-mono);font-size:0.82rem;background:rgba(99,102,241,0.1);color:var(--accent-tertiary);padding:2px 6px;border-radius:4px}
+.msg-attachment-file { font-size:0.8rem; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; margin-top:4px; display:inline-block }
+/* API Key Modal */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:1000; display:none; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s }
+.modal-overlay.visible { display:flex; opacity:1 }
+.modal-content { background:var(--bg-secondary); padding:2rem; border-radius:12px; border:1px solid rgba(255,255,255,0.1); width:90%; max-width:450px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5) }
+.modal-content h2 { margin-bottom:1rem; background:linear-gradient(90deg,#9c27b0,#03a9f4); -webkit-background-clip:text; -webkit-text-fill-color:transparent }
+.modal-content p { color:var(--text-muted); margin-bottom:1.5rem; font-size:0.95rem; line-height:1.5 }
+.modal-content input { width:100%; padding:0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:var(--text-main); margin-bottom:1rem; outline:none; font-family:inherit }
+.modal-content input:focus { border-color:var(--accent-color) }
+.modal-btn { width:100%; background:var(--accent-color); color:white; padding:0.8rem; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-family:inherit; transition:0.2s; font-size:1rem }
+.modal-btn:hover { opacity:0.9; transform:translateY(-1px) }
+.modal-link { display:block; margin-top:1rem; color:var(--accent-color); text-decoration:none; font-size:0.85rem }
+.modal-link:hover { text-decoration:underline }
 .metric-highlight{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:0.85rem;font-weight:600;margin:2px 0}
 .metric-positive{background:var(--success-bg);color:var(--success);border:1px solid rgba(52,211,153,0.15)}
 .metric-negative{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(248,113,113,0.15)}
@@ -320,6 +333,17 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
     </div>
 </div>
 
+<!-- API Key Modal -->
+<div id="api-key-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2>Connect Gemini AI</h2>
+        <p>Enter your Google Gemini API Key to enable advanced AI analysis.</p>
+        <input type="password" id="api-key-input" placeholder="AIzaSy...">
+        <button class="modal-btn" onclick="saveApiKey()">Save & Connect</button>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="modal-link">Get API Key</a>
+    </div>
+</div>
+
 <!-- ====== APP (opens directly) ====== -->
 <div id="app" class="app-container">
     <aside id="sidebar" class="sidebar">
@@ -388,10 +412,60 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
    ========================================== */
 // ⚠️ REPLACE THIS with your Google Cloud OAuth Client ID
 const GOOGLE_CLIENT_ID = '679482367643-e7ihch7dtg43qseh2fluchct0ieklkaq.apps.googleusercontent.com';
+const API_KEY_STORAGE = 'afa_gemini_key';
+let genAI = null;
+let geminiModel = null;
+
+const SYSTEM_PROMPT = `You are Apex Bro, an elite Wall Street hedge fund manager and world-class financial advisor. You provide absolutely flawless, mathematically perfect financial analysis and highly complex strategic advice. 
+When the user provides a PDF or financial data, read it perfectly. Calculate deep insights.
+Format your response beautifully using HTML tags like <h3>, <table>, <tr>, <th>, <td>, and highlight boxes using classes like 'recommendation-box', 'success-box', 'warning-box', or 'danger-box'. Only use inline CSS or HTML. NEVER use Markdown (no \`\`\`html blocks). Just output raw HTML that can be inserted directly into a <div>. Focus on advanced profitability, ratios, margins, risk assessments, and elite actionable strategy. Never give investment advice.`;
+
+function initGemini(){
+    const savedKey = localStorage.getItem(API_KEY_STORAGE);
+    
+    if(!window.GoogleGenerativeAI && savedKey) {
+        import('https://esm.run/@google/generative-ai').then(module => {
+            window.GoogleGenerativeAI = module.GoogleGenerativeAI;
+            genAI = new window.GoogleGenerativeAI(savedKey);
+        }).catch(e => console.error("Failed to dynamically load Gemini SDK:", e));
+    } else if (savedKey && window.GoogleGenerativeAI) {
+        genAI = new window.GoogleGenerativeAI(savedKey);
+    }
+    
+    if(!savedKey) document.getElementById('api-key-modal').classList.add('visible');
+    return !!savedKey;
+}
+
+window.saveApiKey = async function(){
+    const input = document.getElementById('api-key-input').value.trim();
+    if(input.length > 20){
+        localStorage.setItem(API_KEY_STORAGE, input);
+        document.getElementById('api-key-modal').classList.remove('visible');
+        initGemini();
+    }
+};
+
+async function generateGeminiAnalysis(promptText, attachments) {
+    if(!genAI) return null; 
+    
+    const parts = [{ text: promptText }];
+    for(const att of attachments) {
+        if(att.isImage && att.data) parts.push({ inlineData: { data: att.data.split(',')[1], mimeType: att.type } });
+        else if (att.extractedText) parts.push({ text: `\n\n--- Document: ${att.name} ---\n${att.extractedText}\n--- End Document ---` });
+    }
+
+    try {
+        const tempModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: SYSTEM_PROMPT });
+        const result = await tempModel.generateContent(parts);
+        return result.response.text().replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/```$/, '');
+    } catch(err) {
+        console.warn("Gemini Error:", err);
+        return null;
+    }
+}
 
 function initGoogleSignIn() {
     if (typeof google === 'undefined' || !google.accounts) {
-        // GIS library not loaded — show fallback
         document.getElementById('google-btn-fallback').classList.remove('hidden');
         return;
     }
@@ -407,13 +481,11 @@ function initGoogleSignIn() {
             { theme: 'outline', size: 'large', width: 364, text: 'continue_with', shape: 'rectangular', logo_alignment: 'left' }
         );
     } catch (e) {
-        console.warn('Google Sign-In init failed:', e);
         document.getElementById('google-btn-fallback').classList.remove('hidden');
     }
 }
 
 function handleGoogleCredential(response) {
-    // Decode the JWT credential from Google
     const payload = decodeJWT(response.credential);
     if (!payload) { showAuthError('Google sign-in failed. Try again.'); return; }
 
@@ -427,10 +499,8 @@ function handleGoogleCredential(response) {
         password: 'google-oauth'
     };
 
-    // Save and login
     const users = getUsers();
     if (users[user.email]) {
-        // Existing user — update picture
         users[user.email].picture = user.picture;
         users[user.email].provider = 'Google';
     } else {
@@ -448,10 +518,8 @@ function decodeJWT(token) {
     } catch (e) { return null; }
 }
 
-// Fallback: if Client ID not set, use popup to let user enter their Google info
 function googleFallback() {
     if (GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
-        // Client ID is set but GIS failed to load — try OAuth popup
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
             'client_id=' + encodeURIComponent(GOOGLE_CLIENT_ID) +
             '&redirect_uri=' + encodeURIComponent(window.location.origin + window.location.pathname) +
@@ -460,14 +528,12 @@ function googleFallback() {
         window.location.href = authUrl;
         return;
     }
-    // No client ID — use simulated Google popup
     const w=500,h=480,l=(screen.width-w)/2,t=(screen.height-h)/2;
     const popup=window.open('','google_signin','width='+w+',height='+h+',left='+l+',top='+t+',toolbar=no,menubar=no');
     if(!popup){showAuthError('Please allow popups.');return}
     popup.document.write(`<!DOCTYPE html><html><head><title>Sign in – Google</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Google Sans','Segoe UI',Roboto,sans-serif;background:#f8f9fa;display:flex;align-items:center;justify-content:center;height:100vh}.c{background:#fff;border-radius:12px;padding:36px 40px;width:380px;box-shadow:0 1px 3px rgba(0,0,0,0.12)}.logo{text-align:center;margin-bottom:20px}.logo svg{width:72px}.t{text-align:center;font-size:22px;color:#202124;margin-bottom:4px;font-weight:400}.s{text-align:center;font-size:14px;color:#5f6368;margin-bottom:24px}label{font-size:12px;color:#5f6368;margin-bottom:4px;display:block;font-weight:500}input{width:100%;padding:11px 14px;border:1px solid #dadce0;border-radius:8px;font-size:14px;outline:none;margin-bottom:16px;font-family:inherit}input:focus{border-color:#1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,0.15)}.b{width:100%;padding:11px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}.b:hover{background:#1557b0}.e{color:#d93025;font-size:13px;margin-bottom:10px;display:none}.n{text-align:center;margin-top:16px;font-size:12px;color:#9aa0a6}</style></head><body><div class="c"><div class="logo"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></div><div class="t">Sign in</div><div class="s">to continue to Apex Financial Advisor</div><div class="e" id="e"></div><label>Your name</label><input id="n" placeholder="Enter your name" autofocus><label>Gmail address</label><input id="m" type="email" placeholder="you@gmail.com"><button class="b" onclick="go()">Next</button><p class="n">This signs you in to Apex Financial Advisor</p></div><script>function go(){var n=document.getElementById('n').value.trim(),m=document.getElementById('m').value.trim();if(!n||!m){document.getElementById('e').style.display='block';document.getElementById('e').textContent='Please fill in all fields';return}window.opener.postMessage({type:'google-auth',name:n,email:m,picture:''},'*');window.close()}<\/script></body></html>`);
 }
 
-// Listen for messages from popup
 window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'google-auth') {
         const users = getUsers();
@@ -483,14 +549,12 @@ window.addEventListener('message', function(e) {
     }
 });
 
-// Check for OAuth redirect token
 function checkOAuthRedirect() {
     const hash = window.location.hash;
     if (hash && hash.includes('access_token=')) {
         const params = new URLSearchParams(hash.substring(1));
         const token = params.get('access_token');
         if (token) {
-            // Fetch user info from Google
             fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                 headers: { 'Authorization': 'Bearer ' + token }
             }).then(r => r.json()).then(data => {
@@ -506,7 +570,6 @@ function checkOAuthRedirect() {
                     saveUsers(users);
                     loginUser(users[email]);
                 }
-                // Clear hash
                 history.replaceState(null, '', window.location.pathname);
             }).catch(err => console.warn('OAuth userinfo failed:', err));
         }
@@ -543,15 +606,12 @@ function updateUserUI(){
     const ha=document.getElementById('header-avatar'),ht=document.getElementById('header-user-text');
     if(currentUser){
         const initials=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
-        // Sidebar
         if(currentUser.picture){sa.innerHTML=`<img src="${currentUser.picture}" alt="">`;sa.className='sidebar-user-avatar'}
         else{sa.textContent=initials;sa.className='sidebar-user-avatar gradient-bg';sa.innerHTML=initials}
         sn.textContent=currentUser.name;se.textContent=currentUser.email;
-        // Header chip
         if(currentUser.picture){ha.innerHTML=`<img src="${currentUser.picture}" alt="">`;ha.className='signin-chip-avatar loggedin'}
         else{ha.textContent=initials;ha.className='signin-chip-avatar loggedin';ha.innerHTML=initials}
         ht.textContent=currentUser.name.split(' ')[0];
-        // Account modal
         const ma=document.getElementById('modal-avatar');
         if(currentUser.picture){ma.innerHTML=`<img src="${currentUser.picture}" alt="">`;ma.className='account-avatar'}
         else{ma.textContent=initials;ma.className='account-avatar gradient-bg'}
@@ -578,12 +638,13 @@ function handleLogout(){
 }
 function incrementAnalysis(){analysisCount++;if(currentUser){const u=getUsers();if(u[currentUser.email]){u[currentUser.email].analyses=analysisCount;saveUsers(u)}currentUser.analyses=analysisCount;setSession(currentUser)}}
 
-// Init
-(function(){
+window.onload=function(){
     checkOAuthRedirect();
+    initGoogleSignIn();
+    initGemini();
     const s=getSession();if(s){const u=getUsers();if(u[s.email])loginUser(u[s.email])}
     updateUserUI();
-})();
+};
 
 /* ====== CHAT ENGINE ====== */
 let chatHistory=[],isProcessing=false,pendingAttachments=[];
@@ -800,7 +861,21 @@ async function sendMessage(){
     let fullInput=t;
     for(const a of atts){if(a.extractedText)fullInput+='\n\n[Data from '+a.name+']:\n'+a.extractedText}
     if(!fullInput.trim() && atts.length) fullInput = 'I have attached some files but provided no text.';
-    const resp=generateAnalysis(fullInput);
+    
+    // HYBRID ARCHITECTURE: Try Gemini first, fallback to offline rules engine
+    let resp;
+    if(localStorage.getItem(API_KEY_STORAGE)) {
+        if(!genAI) await initGemini(); // Ensure it's loaded
+        if(genAI) {
+            resp = await generateGeminiAnalysis(fullInput, atts);
+        }
+    }
+    
+    if(!resp) {
+        // Fallback to offline rule-based AI
+        resp = generateAnalysis(fullInput);
+    }
+    
     removeTyping();
     addMessage(resp,false);
     chatHistory.push({role:'assistant',content:resp});
@@ -814,5 +889,23 @@ function toggleSidebar(){document.getElementById('sidebar').classList.toggle('op
 document.addEventListener('click',e=>{const s=document.getElementById('sidebar'),t=document.getElementById('sidebar-toggle');if(window.innerWidth<=768&&s.classList.contains('open')&&!s.contains(e.target)&&!t.contains(e.target))s.classList.remove('open')});
 userInput.focus();
 </script>
+<!-- API Key Modal -->
+<div class="modal-overlay" id="api-key-modal">
+    <div class="modal-content">
+        <h2>Connect Gemini 1.5</h2>
+        <p>To read full PDFs and perform elite Wall Street strategy analysis, you need to connect Google's Gemini 1.5 AI.</p>
+        <input type="password" id="api-key-input" placeholder="Paste your Gemini API Key here...">
+        <button class="modal-btn" onclick="saveApiKey()">Connect Hybrid Engine</button>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="modal-link">Get a free API key from Google AI Studio</a>
+        <br>
+        <a href="#" onclick="document.getElementById('api-key-modal').classList.remove('visible'); addMessage('Falling back to Offline Rules Engine.', false)" class="modal-link" style="color:var(--text-muted);margin-top:15px">Skip & Use Offline Rules Engine</a>
+    </div>
+</div>
+
+<script type="module">
+    import { GoogleGenerativeAI } from 'https://esm.run/@google/generative-ai';
+    window.GoogleGenerativeAI = GoogleGenerativeAI;
+</script>
+
 </body>
 </html>
