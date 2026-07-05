@@ -602,7 +602,19 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
     async function sendMessage(){
         const t=userInput.value.trim();
         if((!t&&pendingAttachments.length===0)||isProcessing)return;
-        if(!geminiModel) { document.getElementById('api-key-modal').classList.add('visible'); return; }
+        
+        if(!geminiModel) {
+            if(!initGemini()) {
+                if(localStorage.getItem(API_KEY_STORAGE)) {
+                    addMessage("AI is still loading, please try again in a few seconds.", false);
+                    return;
+                } else {
+                    document.getElementById('api-key-modal').classList.add('visible');
+                    return;
+                }
+            }
+        }
+        
         isProcessing=true;sendBtn.disabled=true;
         const atts=[...pendingAttachments];
         addMessage(t,true,atts);
@@ -629,12 +641,41 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
         area.innerHTML=pendingAttachments.map((att,i)=>`<div class="attachment-preview">${att.isImage?`<img src="${att.data}" alt="preview">`:`<div class="file-icon">📄</div>`}<button class="remove-attachment" onclick="removeAttachment(${i})">✕</button></div>`).join('');
     }
     function removeAttachment(index){pendingAttachments.splice(index,1);renderAttachmentPreviews()}
-    function handleFileSelect(e){
+    async function handleFileSelect(e){
         const files=Array.from(e.target.files);
         for(const file of files){
-            const reader=new FileReader();
-            reader.onload=(evt)=>{pendingAttachments.push({name:file.name,type:file.type,isImage:file.type.startsWith('image/'),data:evt.target.result});renderAttachmentPreviews()};
-            reader.readAsDataURL(file);
+            const isImage=file.type.startsWith('image/');
+            const isPdf=file.type==='application/pdf';
+            const att={name:file.name,type:file.type,isImage,data:'',extractedText:''};
+            
+            if(isImage){
+                const reader=new FileReader();
+                reader.onload=(evt)=>{att.data=evt.target.result;pendingAttachments.push(att);renderAttachmentPreviews()};
+                reader.readAsDataURL(file);
+            }else if(isPdf&&window.pdfjsLib){
+                try{
+                    // Show loading indicator
+                    addTyping();
+                    const arr=await file.arrayBuffer(),pdf=await pdfjsLib.getDocument({data:arr}).promise;
+                    let text='';
+                    const pagesToExtract = Math.min(pdf.numPages, 50); // Extract up to 50 pages to prevent memory issues
+                    for(let i=1;i<=pagesToExtract;i++){
+                        const page=await pdf.getPage(i),content=await page.getTextContent();
+                        text+=content.items.map(it=>it.str).join(' ')+'\n';
+                    }
+                    att.extractedText=text;
+                    pendingAttachments.push(att);
+                    renderAttachmentPreviews();
+                    removeTyping();
+                }catch(err){
+                    console.error('PDF error',err);
+                    removeTyping();
+                }
+            }else{
+                const reader=new FileReader();
+                reader.onload=(evt)=>{att.extractedText=evt.target.result;pendingAttachments.push(att);renderAttachmentPreviews()};
+                reader.readAsText(file);
+            }
         }
         e.target.value='';
     }
