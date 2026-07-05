@@ -596,12 +596,142 @@ function parseNumber(s){if(s==null)return NaN;s=String(s).trim().toLowerCase();l
 function formatCurrency(n){if(isNaN(n))return'N/A';const a=Math.abs(n),s=n<0?'-':'';if(a>=1e9)return s+'$'+(a/1e9).toFixed(2)+'B';if(a>=1e6)return s+'$'+(a/1e6).toFixed(2)+'M';if(a>=1e3)return s+'$'+(a/1e3).toFixed(1)+'K';return s+'$'+a.toFixed(0)}
 function formatPercent(n){return isNaN(n)?'N/A':n.toFixed(1)+'%'}
 function metricClass(v,g,b,h=true){if(isNaN(v))return'metric-neutral';if(h)return v>=g?'metric-positive':v<=b?'metric-negative':'metric-neutral';return v<=g?'metric-positive':v>=b?'metric-negative':'metric-neutral'}
-function extractFinancialData(t){const d={},l=t.toLowerCase(),p=[{k:['revenue','rev','sales','income','turnover','top line'],f:'revenue'},{k:['cogs','cost of goods','cost of goods sold','direct cost'],f:'cogs'},{k:['opex','operating expense','operating expenses','operating cost'],f:'opex'},{k:['net income','net profit','net earnings','bottom line','pat'],f:'netIncome'},{k:['gross profit','gp'],f:'grossProfit'},{k:['total assets','assets'],f:'totalAssets'},{k:['total liabilities','liabilities','total debt'],f:'totalLiabilities'},{k:['equity','shareholders equity','net worth'],f:'equity'},{k:['current assets'],f:'currentAssets'},{k:['current liabilities'],f:'currentLiabilities'},{k:['inventory','stock'],f:'inventory'},{k:['depreciation','amortization'],f:'depreciation'},{k:['interest expense','interest','finance cost'],f:'interestExpense'},{k:['tax','taxes','income tax'],f:'tax'},{k:['ebitda'],f:'ebitda'},{k:['ebit','operating income','operating profit'],f:'ebit'},{k:['cash','cash and equivalents','cash balance'],f:'cash'},{k:['monthly burn','burn rate','monthly expenses'],f:'monthlyBurn'},{k:['employees','headcount','staff','team size'],f:'employees'}];for(const x of p)for(const k of x.k){const r=new RegExp(k+'[:\\s=\\-–]+\\$?([\\d,.]+[kmb]?(?:\\s*(?:crore|lakh|cr|l)s?)?)','i'),mt=l.match(r);if(mt&&!d[x.f]){const v=parseNumber(mt[1]);if(!isNaN(v))d[x.f]=v}}for(const x of p){if(d[x.f])continue;for(const k of x.k){const r=new RegExp('\\$?([\\d,.]+[kmb]?)\\s*(?:in\\s+)?'+k,'i'),mt=l.match(r);if(mt){const v=parseNumber(mt[1]);if(!isNaN(v))d[x.f]=v}}}return d}
-function calculateMetrics(d){const m={};if(d.revenue!==undefined&&d.cogs!==undefined)d.grossProfit=d.grossProfit||(d.revenue-d.cogs);if(d.revenue&&d.grossProfit!==undefined)m.grossMargin=(d.grossProfit/d.revenue)*100;else if(d.revenue&&d.cogs!==undefined)m.grossMargin=((d.revenue-d.cogs)/d.revenue)*100;if(d.netIncome===undefined&&d.revenue!==undefined){const t=(d.cogs||0)+(d.opex||0)+(d.interestExpense||0)+(d.tax||0);if(t>0)d.netIncome=d.revenue-t}if(d.revenue&&d.netIncome!==undefined)m.netProfitMargin=(d.netIncome/d.revenue)*100;if(d.revenue&&d.opex!==undefined)m.opexRatio=(d.opex/d.revenue)*100;if(d.currentAssets&&d.currentLiabilities)m.currentRatio=d.currentAssets/d.currentLiabilities;if(d.totalLiabilities&&d.equity)m.debtToEquity=d.totalLiabilities/d.equity;if(d.netIncome!==undefined&&d.totalAssets)m.roa=(d.netIncome/d.totalAssets)*100;if(d.netIncome!==undefined&&d.equity)m.roe=(d.netIncome/d.equity)*100;if(d.cash&&d.monthlyBurn)m.cashRunway=d.cash/d.monthlyBurn;if(d.opex!==undefined&&m.grossMargin)m.breakEvenRevenue=d.opex/(m.grossMargin/100);if(d.ebitda===undefined&&d.netIncome!==undefined)d.ebitda=d.netIncome+(d.interestExpense||0)+(d.tax||0)+(d.depreciation||0);if(d.ebitda!==undefined&&d.revenue)m.ebitdaMargin=(d.ebitda/d.revenue)*100;return{data:d,metrics:m}}
+function extractFinancialData(t){
+    const d={},l=t.toLowerCase();
+    const p=[
+        {k:['revenue','rev','sales','income','turnover','top line','total income','operating revenue'],f:'revenue'},
+        {k:['cogs','cost of goods','cost of goods sold','direct cost','cost of revenue','cost of sales'],f:'cogs'},
+        {k:['opex','operating expense','operating expenses','operating cost','sg&a','admin expenses'],f:'opex'},
+        {k:['net income','net profit','net earnings','bottom line','pat','profit after tax'],f:'netIncome'},
+        {k:['gross profit','gp','gross margin'],f:'grossProfit'},
+        {k:['total assets','assets'],f:'totalAssets'},
+        {k:['total liabilities','liabilities','total debt'],f:'totalLiabilities'},
+        {k:['equity','shareholders equity','net worth','total equity'],f:'equity'},
+        {k:['current assets'],f:'currentAssets'},
+        {k:['current liabilities'],f:'currentLiabilities'},
+        {k:['inventory','stock','inventories'],f:'inventory'},
+        {k:['depreciation','amortization','d&a'],f:'depreciation'},
+        {k:['interest expense','interest','finance cost','finance costs'],f:'interestExpense'},
+        {k:['tax','taxes','income tax','tax expense'],f:'tax'},
+        {k:['ebitda'],f:'ebitda'},
+        {k:['ebit','operating income','operating profit','pbit'],f:'ebit'},
+        {k:['cash','cash and equivalents','cash balance','cash & bank'],f:'cash'},
+        {k:['accounts receivable','ar','receivables','trade receivables','debtors'],f:'ar'},
+        {k:['accounts payable','ap','payables','trade payables','creditors'],f:'ap'},
+        {k:['capex','capital expenditure','capital expenditures'],f:'capex'},
+        {k:['operating cash flow','ocf','cash from operations','net cash from operating activities'],f:'ocf'},
+        {k:['free cash flow','fcf'],f:'fcf'},
+        {k:['long term debt','long-term debt','non-current liabilities'],f:'longTermDebt'},
+        {k:['retained earnings','reserves','surplus'],f:'retainedEarnings'},
+        {k:['monthly burn','burn rate','monthly expenses'],f:'monthlyBurn'},
+        {k:['employees','headcount','staff','team size'],f:'employees'}
+    ];
+    // Broad NLP-style regex: look for keyword, then optional noise, then a number (handling tabs, spaces, newlines, negative signs)
+    for(const x of p){
+        for(const k of x.k){
+            const r=new RegExp(k+'(?:[^\\d]{0,20}?)[\\-–$₹€£]*([\\d,.]+[kmb]?(?:\\s*(?:crore|lakh|cr|l)s?)?)','i');
+            const mt=l.match(r);
+            if(mt&&!d[x.f]){
+                const v=parseNumber(mt[1]);
+                if(!isNaN(v)) d[x.f]=l.includes(`(${mt[1]})`) || l.includes(`-${mt[1]}`) ? -v : v; // handle negatives
+            }
+        }
+    }
+    return d;
+}
+
+function calculateMetrics(d){
+    const m={};
+    if(d.revenue!==undefined&&d.cogs!==undefined)d.grossProfit=d.grossProfit||(d.revenue-d.cogs);
+    if(d.revenue&&d.grossProfit!==undefined)m.grossMargin=(d.grossProfit/d.revenue)*100;
+    else if(d.revenue&&d.cogs!==undefined)m.grossMargin=((d.revenue-d.cogs)/d.revenue)*100;
+    
+    if(d.netIncome===undefined&&d.revenue!==undefined){const t=(d.cogs||0)+(d.opex||0)+(d.interestExpense||0)+(d.tax||0);if(t>0)d.netIncome=d.revenue-t;}
+    if(d.revenue&&d.netIncome!==undefined)m.netProfitMargin=(d.netIncome/d.revenue)*100;
+    if(d.revenue&&d.opex!==undefined)m.opexRatio=(d.opex/d.revenue)*100;
+    
+    // Liquidity
+    if(d.currentAssets&&d.currentLiabilities)m.currentRatio=d.currentAssets/d.currentLiabilities;
+    if(d.currentAssets&&d.inventory&&d.currentLiabilities)m.quickRatio=(d.currentAssets-d.inventory)/d.currentLiabilities;
+    if(d.currentAssets&&d.currentLiabilities)m.workingCapital=d.currentAssets-d.currentLiabilities;
+    
+    // Leverage & Efficiency
+    if(d.totalLiabilities&&d.equity)m.debtToEquity=d.totalLiabilities/d.equity;
+    if(d.revenue&&d.totalAssets)m.assetTurnover=d.revenue/d.totalAssets;
+    
+    // Profitability & Cash Flow
+    if(d.netIncome!==undefined&&d.totalAssets)m.roa=(d.netIncome/d.totalAssets)*100;
+    if(d.netIncome!==undefined&&d.equity)m.roe=(d.netIncome/d.equity)*100;
+    
+    // EBIT & Interest Coverage
+    if(d.ebit===undefined && d.netIncome!==undefined) d.ebit = d.netIncome + (d.tax||0) + (d.interestExpense||0);
+    if(d.ebit!==undefined && d.interestExpense) m.interestCoverage = d.ebit / d.interestExpense;
+    
+    if(d.ebitda===undefined&&d.ebit!==undefined) d.ebitda=d.ebit+(d.depreciation||0);
+    if(d.ebitda!==undefined&&d.revenue)m.ebitdaMargin=(d.ebitda/d.revenue)*100;
+    
+    if(d.ocf!==undefined && d.capex!==undefined) d.fcf = d.fcf || (d.ocf - d.capex);
+    if(d.fcf!==undefined && d.revenue) m.fcfMargin = (d.fcf/d.revenue)*100;
+
+    if(d.cash&&d.monthlyBurn)m.cashRunway=d.cash/d.monthlyBurn;
+    if(d.opex!==undefined&&m.grossMargin)m.breakEvenRevenue=d.opex/(m.grossMargin/100);
+    return{data:d,metrics:m};
+}
 
 function generateAnalysis(input){const lower=input.toLowerCase().trim();const oos=[/which stock should i buy/i,/buy.*stock/i,/invest in.*stock/i,/stock market/i,/legal advice/i,/tax filing/i,/recipe/i,/weather/i,/joke/i,/poem/i];for(const p of oos)if(p.test(lower))return`I am <strong>Apex Financial Advisor</strong> — designed for financial analysis only. I cannot provide investment advice, legal counsel, or stock predictions.\n\n<div class="recommendation-box"><h4>What I Can Do</h4><ul><li>P&L / Balance Sheet analysis</li><li>Ratio analysis & benchmarking</li><li>Cash flow & profitability</li><li>Scenario planning</li></ul></div>`;const ext=extractFinancialData(input),hasData=Object.keys(ext).length>0,{data,metrics}=calculateMetrics(ext);const userName=currentUser?currentUser.name.split(' ')[0]:'there';if(!hasData&&(/^(hi|hello|hey|good morning|good evening)[\s!.?]*$/i.test(lower)||lower.length<10))return`Welcome, <strong>${userName}</strong>! I'm <strong>Apex Financial Advisor</strong>.\n\n<div class="recommendation-box"><h4>How to Use</h4><ul><li><strong>Share numbers:</strong> "Revenue: $500K, COGS: $200K, Opex: $250K"</li><li><strong>Ask analysis:</strong> "Calculate my debt-to-equity ratio"</li><li><strong>Scenarios:</strong> "What if revenue drops 20%?"</li></ul></div>`;const sm=lower.match(/what if.*(increase|decrease|drop|rise|grow|reduce|cut|fall|goes up|goes down).*?(\d+)%/i);if(sm&&hasData)return genScenario(input,data,metrics,sm);if(hasData){incrementAnalysis();return genReport(data,metrics)}if(lower.includes('what is')||lower.includes('explain')||lower.includes('define'))return answerConcept(lower);return`I need financial data to analyze.\n\n<div class="recommendation-box"><h4>Example</h4><p><code>Revenue: $500K, COGS: $200K, Opex: $180K</code></p></div>`}
 
-function genReport(d,m){let h='<h3>📋 Executive Summary</h3>';let s='stable',e='🟡',l='Stable';if(d.netIncome!==undefined){if(d.netIncome>0&&m.netProfitMargin>10){s='strong';e='🟢';l='Strong — Profitable'}else if(d.netIncome<0){s='critical';e='🔴';l='Critical — Loss'}}h+=`<div class="${s==='strong'?'success-box':s==='critical'?'danger-box':'warning-box'}"><h4>${e} ${l}</h4>`;const f=[];if(d.netIncome!==undefined)f.push(d.netIncome>=0?`Net Income: <strong>${formatCurrency(d.netIncome)}</strong>`:`Net Loss: <strong>${formatCurrency(d.netIncome)}</strong>`);if(m.grossMargin!==undefined)f.push(`Gross Margin: <strong>${formatPercent(m.grossMargin)}</strong>`);if(f.length)h+=`<ul>${f.map(x=>`<li>${x}</li>`).join('')}</ul>`;h+=`</div><h3>📊 Key Metrics</h3><table><tr><th>Metric</th><th>Value</th><th>Status</th></tr>`;if(d.revenue!==undefined)h+=`<tr><td>Revenue</td><td><span class="metric-highlight metric-neutral">${formatCurrency(d.revenue)}</span></td><td>—</td></tr>`;if(m.grossMargin!==undefined)h+=`<tr><td>Gross Margin</td><td><span class="metric-highlight ${metricClass(m.grossMargin,50,20)}">${formatPercent(m.grossMargin)}</span></td><td>${m.grossMargin>=50?'✅':m.grossMargin>=30?'🟡':'🔴'}</td></tr>`;if(d.netIncome!==undefined)h+=`<tr><td>Net Income</td><td><span class="metric-highlight ${d.netIncome>=0?'metric-positive':'metric-negative'}">${formatCurrency(d.netIncome)}</span></td><td>${d.netIncome>=0?'✅':'🔴'}</td></tr>`;if(m.netProfitMargin!==undefined)h+=`<tr><td>Net Margin</td><td><span class="metric-highlight ${metricClass(m.netProfitMargin,10,0)}">${formatPercent(m.netProfitMargin)}</span></td><td>${m.netProfitMargin>15?'✅':m.netProfitMargin>0?'🟡':'🔴'}</td></tr>`;if(m.opexRatio!==undefined)h+=`<tr><td>OpEx Ratio</td><td><span class="metric-highlight ${metricClass(m.opexRatio,30,60,false)}">${formatPercent(m.opexRatio)}</span></td><td>${m.opexRatio<=30?'✅':m.opexRatio<=50?'🟡':'🔴'}</td></tr>`;if(m.currentRatio!==undefined)h+=`<tr><td>Current Ratio</td><td><span class="metric-highlight ${metricClass(m.currentRatio,1.5,1)}">${m.currentRatio.toFixed(2)}</span></td><td>${m.currentRatio>=2?'✅':m.currentRatio>=1?'🟡':'🔴'}</td></tr>`;if(m.debtToEquity!==undefined)h+=`<tr><td>D/E</td><td><span class="metric-highlight ${metricClass(m.debtToEquity,1,2,false)}">${m.debtToEquity.toFixed(2)}</span></td><td>${m.debtToEquity<=1?'✅':m.debtToEquity<=2?'🟡':'🔴'}</td></tr>`;if(m.roe!==undefined)h+=`<tr><td>ROE</td><td><span class="metric-highlight ${metricClass(m.roe,15,5)}">${formatPercent(m.roe)}</span></td><td>${m.roe>=15?'✅':'🟡'}</td></tr>`;if(m.cashRunway!==undefined)h+=`<tr><td>Runway</td><td><span class="metric-highlight ${metricClass(m.cashRunway,12,3)}">${m.cashRunway.toFixed(1)} mo</span></td><td>${m.cashRunway>=12?'✅':m.cashRunway>=6?'🟡':'🔴'}</td></tr>`;h+=`</table>`;if(m.breakEvenRevenue!==undefined&&d.revenue){const g=m.breakEvenRevenue-d.revenue;h+=g>0?`<div class="warning-box"><h4>⚠️ Below Break-Even</h4><p>Need ${formatCurrency(m.breakEvenRevenue)}, gap: ${formatCurrency(g)}</p></div>`:`<div class="success-box"><h4>✅ Above Break-Even</h4><p>Safety: ${formatCurrency(Math.abs(g))}</p></div>`}h+=`<h3>🎯 Actions</h3>`;const r=[];if(d.netIncome!==undefined&&d.netIncome<0)r.push(`<div class="danger-box"><h4>🔴 Address Losses</h4><p>Losing ${formatCurrency(Math.abs(d.netIncome))}. Audit OpEx.</p></div>`);if(m.opexRatio!==undefined&&m.opexRatio>55)r.push(`<div class="warning-box"><h4>⚠️ Cut OpEx</h4><p>OpEx at ${formatPercent(m.opexRatio)}</p></div>`);if(m.grossMargin!==undefined&&m.grossMargin>=60)r.push(`<div class="success-box"><h4>✅ Strong Margins</h4><p>${formatPercent(m.grossMargin)} — invest in growth.</p></div>`);if(!r.length)r.push(`<div class="recommendation-box"><h4>📋 Next Steps</h4><p>Provide more data for deeper analysis.</p></div>`);h+=r.join('');h+=`<div class="separator"></div><p style="font-size:0.78rem;color:var(--text-muted);font-style:italic">Verify with a qualified professional.</p>`;return h}
+function genReport(d,m){
+    let h='<h3>📋 Executive Summary</h3>';
+    let s='stable',e='🟡',l='Stable';
+    if(d.netIncome!==undefined || d.fcf!==undefined){
+        const isProfitable = (d.netIncome||0) > 0 || (d.fcf||0) > 0;
+        if(isProfitable && (m.netProfitMargin>10 || m.fcfMargin>5)){s='strong';e='🟢';l='Strong & Profitable';}
+        else if(!isProfitable){s='critical';e='🔴';l='Critical Warning — Losses Detected';}
+    }
+    if(m.interestCoverage!==undefined && m.interestCoverage < 1.5) { s='critical'; e='🔴'; l='High Bankruptcy Risk (Low Interest Coverage)'; }
+    
+    h+=`<div class="${s==='strong'?'success-box':s==='critical'?'danger-box':'warning-box'}"><h4>${e} ${l}</h4>`;
+    const f=[];
+    if(d.revenue!==undefined) f.push(`Top-Line Revenue: <strong>${formatCurrency(d.revenue)}</strong>`);
+    if(d.netIncome!==undefined) f.push(d.netIncome>=0?`Net Income: <strong>${formatCurrency(d.netIncome)}</strong>`:`Net Loss: <strong>${formatCurrency(d.netIncome)}</strong>`);
+    if(d.fcf!==undefined) f.push(`Free Cash Flow: <strong>${formatCurrency(d.fcf)}</strong>`);
+    if(m.grossMargin!==undefined) f.push(`Gross Margin: <strong>${formatPercent(m.grossMargin)}</strong>`);
+    if(f.length)h+=`<ul>${f.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+    h+=`</div><h3>📊 Deep Financial Ratios</h3><table><tr><th>Metric</th><th>Value</th><th>Status</th></tr>`;
+    
+    if(d.revenue!==undefined)h+=`<tr><td>Revenue</td><td><span class="metric-highlight metric-neutral">${formatCurrency(d.revenue)}</span></td><td>—</td></tr>`;
+    if(m.grossMargin!==undefined)h+=`<tr><td>Gross Margin</td><td><span class="metric-highlight ${metricClass(m.grossMargin,50,20)}">${formatPercent(m.grossMargin)}</span></td><td>${m.grossMargin>=50?'✅':m.grossMargin>=30?'🟡':'🔴'}</td></tr>`;
+    if(m.netProfitMargin!==undefined)h+=`<tr><td>Net Margin</td><td><span class="metric-highlight ${metricClass(m.netProfitMargin,10,0)}">${formatPercent(m.netProfitMargin)}</span></td><td>${m.netProfitMargin>15?'✅':m.netProfitMargin>0?'🟡':'🔴'}</td></tr>`;
+    if(m.ebitdaMargin!==undefined)h+=`<tr><td>EBITDA Margin</td><td><span class="metric-highlight ${metricClass(m.ebitdaMargin,20,5)}">${formatPercent(m.ebitdaMargin)}</span></td><td>${m.ebitdaMargin>20?'✅':m.ebitdaMargin>5?'🟡':'🔴'}</td></tr>`;
+    
+    if(m.currentRatio!==undefined)h+=`<tr><td>Current Ratio</td><td><span class="metric-highlight ${metricClass(m.currentRatio,1.5,1)}">${m.currentRatio.toFixed(2)}</span></td><td>${m.currentRatio>=2?'✅':m.currentRatio>=1?'🟡':'🔴'}</td></tr>`;
+    if(m.quickRatio!==undefined)h+=`<tr><td>Quick Ratio (Acid)</td><td><span class="metric-highlight ${metricClass(m.quickRatio,1,0.5)}">${m.quickRatio.toFixed(2)}</span></td><td>${m.quickRatio>=1?'✅':m.quickRatio>=0.5?'🟡':'🔴'}</td></tr>`;
+    
+    if(m.debtToEquity!==undefined)h+=`<tr><td>D/E Ratio</td><td><span class="metric-highlight ${metricClass(m.debtToEquity,1,2,false)}">${m.debtToEquity.toFixed(2)}</span></td><td>${m.debtToEquity<=1?'✅':m.debtToEquity<=2?'🟡':'🔴'}</td></tr>`;
+    if(m.interestCoverage!==undefined)h+=`<tr><td>Interest Coverage</td><td><span class="metric-highlight ${metricClass(m.interestCoverage,3,1.5)}">${m.interestCoverage.toFixed(2)}x</span></td><td>${m.interestCoverage>=3?'✅':m.interestCoverage>=1.5?'🟡':'🔴'}</td></tr>`;
+    
+    if(m.assetTurnover!==undefined)h+=`<tr><td>Asset Turnover</td><td><span class="metric-highlight ${metricClass(m.assetTurnover,1,0.5)}">${m.assetTurnover.toFixed(2)}x</span></td><td>${m.assetTurnover>=1?'✅':'🟡'}</td></tr>`;
+    if(m.roe!==undefined)h+=`<tr><td>ROE</td><td><span class="metric-highlight ${metricClass(m.roe,15,5)}">${formatPercent(m.roe)}</span></td><td>${m.roe>=15?'✅':'🟡'}</td></tr>`;
+    if(m.roa!==undefined)h+=`<tr><td>ROA</td><td><span class="metric-highlight ${metricClass(m.roa,5,2)}">${formatPercent(m.roa)}</span></td><td>${m.roa>=5?'✅':'🟡'}</td></tr>`;
+    h+=`</table>`;
+    
+    h+=`<h3>🎯 Strategic Actions</h3>`;
+    const r=[];
+    if(m.interestCoverage!==undefined && m.interestCoverage < 1.5) r.push(`<div class="danger-box"><h4>🔴 Debt Restructuring Needed</h4><p>Your EBIT barely covers interest expenses (${m.interestCoverage.toFixed(1)}x). High risk of default.</p></div>`);
+    if(d.netIncome!==undefined&&d.netIncome<0) r.push(`<div class="danger-box"><h4>🔴 Address Operating Losses</h4><p>Losing ${formatCurrency(Math.abs(d.netIncome))}. Audit OpEx and underperforming assets immediately.</p></div>`);
+    if(m.quickRatio!==undefined && m.quickRatio < 0.5) r.push(`<div class="danger-box"><h4>🔴 Severe Liquidity Crunch</h4><p>Quick Ratio is ${m.quickRatio.toFixed(2)}. You lack liquid assets to cover short-term liabilities without selling inventory.</p></div>`);
+    
+    if(m.opexRatio!==undefined&&m.opexRatio>55) r.push(`<div class="warning-box"><h4>⚠️ Optimize Operating Expenses</h4><p>OpEx is consuming ${formatPercent(m.opexRatio)} of revenue.</p></div>`);
+    if(d.fcf!==undefined && d.fcf < 0) r.push(`<div class="warning-box"><h4>⚠️ Negative Free Cash Flow</h4><p>FCF is ${formatCurrency(d.fcf)}. Re-evaluate CAPEX spending vs operating cash generation.</p></div>`);
+    
+    if(m.grossMargin!==undefined&&m.grossMargin>=60) r.push(`<div class="success-box"><h4>✅ Strong Pricing Power</h4><p>Gross margin of ${formatPercent(m.grossMargin)} indicates excellent product economics. Invest in sales & marketing.</p></div>`);
+    if(d.fcf!==undefined && d.fcf > 0) r.push(`<div class="success-box"><h4>✅ Healthy Cash Generation</h4><p>Positive FCF of ${formatCurrency(d.fcf)} gives room for dividends, debt paydown, or acquisitions.</p></div>`);
+    
+    if(!r.length) r.push(`<div class="recommendation-box"><h4>📋 Next Steps</h4><p>Provide more balance sheet data (Assets, Liabilities, Interest) for deeper structural analysis.</p></div>`);
+    h+=r.join('');
+    h+=`<div class="separator"></div><p style="font-size:0.78rem;color:var(--text-muted);font-style:italic">Generated by Apex Rules Engine. Verify with a qualified financial professional.</p>`;
+    return h;
+}
 
 function genScenario(input,d,m,match){const dir=match[1].toLowerCase(),pct=parseFloat(match[2]),up=['increase','rise','grow','goes up'].some(w=>dir.includes(w)),f=up?1+pct/100:1-pct/100;let h=`<h3>🔮 Scenario: ${pct}% ${up?'Increase':'Decrease'}</h3><table><tr><th>Metric</th><th>Current</th><th>Projected</th></tr>`;if(d.revenue){const nr=d.revenue*f;h+=`<tr><td>Revenue</td><td>${formatCurrency(d.revenue)}</td><td>${formatCurrency(nr)}</td></tr>`;if(d.cogs!==undefined&&d.opex!==undefined){const nn=nr-d.cogs-d.opex;h+=`<tr><td>Net Income</td><td>${formatCurrency(d.netIncome)}</td><td><span class="metric-highlight ${nn>=0?'metric-positive':'metric-negative'}">${formatCurrency(nn)}</span></td></tr>`}}h+=`</table>`;incrementAnalysis();return h}
 
