@@ -543,7 +543,7 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
             try{
                 genAI = new window.GoogleGenerativeAI(savedKey);
                 geminiModel = genAI.getGenerativeModel({ 
-                    model: "gemini-1.5-pro",
+                    model: "gemini-1.5-flash",
                     systemInstruction: "You are Apex Bro, a highly capable financial advisor AI. You provide clear, concise, and professional financial analysis. If the user provides financial data, format your response beautifully using HTML tags like <h3>, <table>, <tr>, <th>, <td>, and highlight boxes using classes like 'recommendation-box', 'success-box', 'warning-box', or 'danger-box'. Only use inline CSS or HTML. NEVER use Markdown. Do not include markdown code block syntax (like ```html). Just output raw HTML that can be inserted directly into a <div>. Focus on profitability, ratios, margins, and actionable advice. Never give investment advice."
                 });
                 document.getElementById('api-key-modal').classList.remove('visible');
