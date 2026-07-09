@@ -369,7 +369,7 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
         <header class="chat-header">
             <div class="chat-header-left"><h2>Financial Analysis</h2><span class="chat-header-badge">Powered by Apex AI</span></div>
             <div class="chat-header-right">
-                <button class="header-action-btn" onclick="document.getElementById('api-key-modal').classList.add('visible')" title="API Key"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg></button>
+                <button class="header-action-btn" onclick="changeApiKey()" title="Change API Key"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg></button>
                 <button class="header-action-btn" onclick="clearChat()" title="Clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/></svg></button>
                 <button class="header-action-btn" onclick="exportChat()" title="Export"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21,15v4a2,2,0,0,1-2,2H5a2,2,0,0,1-2-2V15"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
                 <button id="header-user-btn" class="signin-chip" onclick="handleUserClick()">
@@ -439,11 +439,28 @@ function initGemini(){
 
 window.saveApiKey = async function(){
     const input = document.getElementById('api-key-input').value.trim();
-    if(input.length > 20){
-        localStorage.setItem(API_KEY_STORAGE, input);
-        document.getElementById('api-key-modal').classList.remove('visible');
-        initGemini();
+    
+    // Validate the key format
+    if(input.length < 20) {
+        alert('API key is too short. Please paste the full key.');
+        return;
     }
+    if(!input.startsWith('AIza')) {
+        alert('Invalid API key format. A valid Google AI Studio key starts with "AIza". Make sure you are copying from Google AI Studio (not Vertex AI or OAuth).');
+        return;
+    }
+    
+    localStorage.setItem(API_KEY_STORAGE, input);
+    document.getElementById('api-key-modal').classList.remove('visible');
+    initGemini();
+};
+
+window.changeApiKey = function(){
+    localStorage.removeItem(API_KEY_STORAGE);
+    genAI = null;
+    geminiModel = null;
+    document.getElementById('api-key-input').value = '';
+    document.getElementById('api-key-modal').classList.add('visible');
 };
 
 async function generateGeminiAnalysis(promptText, attachments) {
@@ -469,6 +486,7 @@ async function generateGeminiAnalysis(promptText, attachments) {
     }
 
     const modelsToTry = [
+        { name: "gemini-2.0-flash", config: { systemInstruction: SYSTEM_PROMPT } },
         { name: "gemini-1.5-pro", config: { systemInstruction: SYSTEM_PROMPT } },
         { name: "gemini-pro", config: {} }
     ];
@@ -478,9 +496,8 @@ async function generateGeminiAnalysis(promptText, attachments) {
         try {
             let finalParts = [...parts];
             if(m.name === "gemini-pro") {
-                // gemini-pro (1.0) doesn't support systemInstruction directly in the same way, nor images
                 finalParts = [{ text: "SYSTEM INSTRUCTION: " + SYSTEM_PROMPT + "\n\n" + finalPrompt }];
-                if(attachments.some(a => a.isImage)) continue; // Skip gemini-pro if there are images
+                if(attachments.some(a => a.isImage)) continue;
                 for(const att of attachments) {
                     if (att.extractedText) finalParts[0].text += `\n\n--- Document: ${att.name} ---\n${att.extractedText}`;
                 }
@@ -496,9 +513,8 @@ async function generateGeminiAnalysis(promptText, attachments) {
         }
     }
     
-    // If we get here, all models failed.
     const allErrorsHtml = errors.map(e => `<li>${e}</li>`).join('');
-    return `<div class="danger-box"><h4>API KEY REJECTED</h4><p>Google's servers rejected your request. Here are the exact errors for each model we tried:</p><ul style="font-family:monospace;font-size:0.8rem;background:rgba(0,0,0,0.2);padding:10px 10px 10px 25px;border-radius:4px;margin-top:10px;text-align:left">${allErrorsHtml}</ul><p style="margin-top:10px">If you see a 404 or "not found", you need to generate a new key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:white;text-decoration:underline">Google AI Studio</a>. If you see a 400 (Payload Too Large), the PDF is too big for the AI.</p></div>`;
+    return `<div class="danger-box"><h4>API KEY ERROR</h4><p>Your API key was rejected by Google.</p><ul style="font-family:monospace;font-size:0.75rem;background:rgba(0,0,0,0.2);padding:10px 10px 10px 25px;border-radius:4px;margin-top:10px;text-align:left">${allErrorsHtml}</ul><p style="margin-top:10px">Click the 🔑 icon in the top right corner to enter a new key. Get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:white;text-decoration:underline">Google AI Studio</a>.</p></div>`;
 }
 
 function initGoogleSignIn() {
