@@ -207,18 +207,6 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
 .message-bubble li{margin:4px 0;color:var(--text-secondary)}.message-bubble li strong{color:var(--text-primary)}
 .message-bubble code{font-family:var(--font-mono);font-size:0.82rem;background:rgba(99,102,241,0.1);color:var(--accent-tertiary);padding:2px 6px;border-radius:4px}
 .msg-attachment-file { font-size:0.8rem; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; margin-top:4px; display:inline-block }
-/* API Key Modal */
-.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:1000; display:none; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s }
-.modal-overlay.visible { display:flex; opacity:1 }
-.modal-content { background:var(--bg-secondary); padding:2rem; border-radius:12px; border:1px solid rgba(255,255,255,0.1); width:90%; max-width:450px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5) }
-.modal-content h2 { margin-bottom:1rem; background:linear-gradient(90deg,#9c27b0,#03a9f4); -webkit-background-clip:text; -webkit-text-fill-color:transparent }
-.modal-content p { color:var(--text-muted); margin-bottom:1.5rem; font-size:0.95rem; line-height:1.5 }
-.modal-content input { width:100%; padding:0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:var(--text-main); margin-bottom:1rem; outline:none; font-family:inherit }
-.modal-content input:focus { border-color:var(--accent-color) }
-.modal-btn { width:100%; background:var(--accent-color); color:white; padding:0.8rem; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-family:inherit; transition:0.2s; font-size:1rem }
-.modal-btn:hover { opacity:0.9; transform:translateY(-1px) }
-.modal-link { display:block; margin-top:1rem; color:var(--accent-color); text-decoration:none; font-size:0.85rem }
-.modal-link:hover { text-decoration:underline }
 .metric-highlight{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:0.85rem;font-weight:600;margin:2px 0}
 .metric-positive{background:var(--success-bg);color:var(--success);border:1px solid rgba(52,211,153,0.15)}
 .metric-negative{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(248,113,113,0.15)}
@@ -369,7 +357,7 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
         <header class="chat-header">
             <div class="chat-header-left"><h2>Financial Analysis</h2><span class="chat-header-badge">Powered by Apex AI</span></div>
             <div class="chat-header-right">
-                <button class="header-action-btn" onclick="changeApiKey()" title="Change API Key"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg></button>
+
                 <button class="header-action-btn" onclick="clearChat()" title="Clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/></svg></button>
                 <button class="header-action-btn" onclick="exportChat()" title="Export"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21,15v4a2,2,0,0,1-2,2H5a2,2,0,0,1-2-2V15"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
                 <button id="header-user-btn" class="signin-chip" onclick="handleUserClick()">
@@ -411,111 +399,7 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
 /* ==========================================
    GOOGLE IDENTITY SERVICES (Real Google Sign-In)
    ========================================== */
-// ⚠️ REPLACE THIS with your Google Cloud OAuth Client ID
 const GOOGLE_CLIENT_ID = '679482367643-e7ihch7dtg43qseh2fluchct0ieklkaq.apps.googleusercontent.com';
-const API_KEY_STORAGE = 'afa_gemini_key';
-let genAI = null;
-let geminiModel = null;
-
-const SYSTEM_PROMPT = `You are Apex Bro, an elite Wall Street hedge fund manager and world-class financial advisor. You provide absolutely flawless, mathematically perfect financial analysis and highly complex strategic advice. 
-When the user provides a PDF or financial data, read it perfectly. Calculate deep insights.
-Format your response beautifully using HTML tags like <h3>, <table>, <tr>, <th>, <td>, and highlight boxes using classes like 'recommendation-box', 'success-box', 'warning-box', or 'danger-box'. Only use inline CSS or HTML. NEVER use Markdown (no \`\`\`html blocks). Just output raw HTML that can be inserted directly into a <div>. Focus on advanced profitability, ratios, margins, risk assessments, and elite actionable strategy. Never give investment advice.`;
-
-function initGemini(){
-    const savedKey = localStorage.getItem(API_KEY_STORAGE);
-    
-    if(!window.GoogleGenerativeAI && savedKey) {
-        import('https://esm.run/@google/generative-ai').then(module => {
-            window.GoogleGenerativeAI = module.GoogleGenerativeAI;
-            genAI = new window.GoogleGenerativeAI(savedKey);
-        }).catch(e => console.error("Failed to dynamically load Gemini SDK:", e));
-    } else if (savedKey && window.GoogleGenerativeAI) {
-        genAI = new window.GoogleGenerativeAI(savedKey);
-    }
-    
-    if(!savedKey) document.getElementById('api-key-modal').classList.add('visible');
-    return !!savedKey;
-}
-
-window.saveApiKey = async function(){
-    const input = document.getElementById('api-key-input').value.trim();
-    
-    // Validate the key format
-    if(input.length < 20) {
-        alert('API key is too short. Please paste the full key.');
-        return;
-    }
-    if(!input.startsWith('AIza')) {
-        alert('Invalid API key format. A valid Google AI Studio key starts with "AIza". Make sure you are copying from Google AI Studio (not Vertex AI or OAuth).');
-        return;
-    }
-    
-    localStorage.setItem(API_KEY_STORAGE, input);
-    document.getElementById('api-key-modal').classList.remove('visible');
-    initGemini();
-};
-
-window.changeApiKey = function(){
-    localStorage.removeItem(API_KEY_STORAGE);
-    genAI = null;
-    geminiModel = null;
-    document.getElementById('api-key-input').value = '';
-    document.getElementById('api-key-modal').classList.add('visible');
-};
-
-async function generateGeminiAnalysis(promptText, attachments) {
-    if(!genAI) return null; 
-    
-    // Build context from the last 4 messages for conversational memory
-    let historyContext = "";
-    const recentHistory = chatHistory.slice(-4);
-    for(const msg of recentHistory) {
-        if(msg.role === 'user') historyContext += `User: ${msg.content}\n`;
-        else historyContext += `Apex Bro: ${msg.content}\n`;
-    }
-    
-    let finalPrompt = promptText;
-    if(historyContext.length > 0) {
-        finalPrompt = `[Previous Conversation Context]:\n${historyContext}\n\n[New User Message]:\n${promptText}`;
-    }
-
-    const parts = [{ text: finalPrompt }];
-    for(const att of attachments) {
-        if(att.isImage && att.data) parts.push({ inlineData: { data: att.data.split(',')[1], mimeType: att.type } });
-        else if (att.extractedText) parts.push({ text: `\n\n--- Document: ${att.name} ---\n${att.extractedText}\n--- End Document ---` });
-    }
-
-    const modelsToTry = [
-        { name: "gemini-2.0-flash", config: { systemInstruction: SYSTEM_PROMPT } },
-        { name: "gemini-1.5-pro", config: { systemInstruction: SYSTEM_PROMPT } },
-        { name: "gemini-pro", config: {} }
-    ];
-
-    let errors = [];
-    for(const m of modelsToTry) {
-        try {
-            let finalParts = [...parts];
-            if(m.name === "gemini-pro") {
-                finalParts = [{ text: "SYSTEM INSTRUCTION: " + SYSTEM_PROMPT + "\n\n" + finalPrompt }];
-                if(attachments.some(a => a.isImage)) continue;
-                for(const att of attachments) {
-                    if (att.extractedText) finalParts[0].text += `\n\n--- Document: ${att.name} ---\n${att.extractedText}`;
-                }
-            }
-
-            const tempModel = genAI.getGenerativeModel({ model: m.name, ...m.config });
-            const result = await tempModel.generateContent(finalParts);
-            geminiModel = tempModel;
-            return result.response.text().replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/```$/, '');
-        } catch(err) {
-            errors.push(`<b>${m.name}:</b> ${err.message}`);
-            console.warn(`Model ${m.name} failed:`, err);
-        }
-    }
-    
-    const allErrorsHtml = errors.map(e => `<li>${e}</li>`).join('');
-    return `<div class="danger-box"><h4>API KEY ERROR</h4><p>Your API key was rejected by Google.</p><ul style="font-family:monospace;font-size:0.75rem;background:rgba(0,0,0,0.2);padding:10px 10px 10px 25px;border-radius:4px;margin-top:10px;text-align:left">${allErrorsHtml}</ul><p style="margin-top:10px">Click the 🔑 icon in the top right corner to enter a new key. Get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:white;text-decoration:underline">Google AI Studio</a>.</p></div>`;
-}
 
 function initGoogleSignIn() {
     if (typeof google === 'undefined' || !google.accounts) {
@@ -694,7 +578,7 @@ function incrementAnalysis(){analysisCount++;if(currentUser){const u=getUsers();
 window.onload=function(){
     checkOAuthRedirect();
     initGoogleSignIn();
-    initGemini();
+
     const s=getSession();if(s){const u=getUsers();if(u[s.email])loginUser(u[s.email])}
     updateUserUI();
 };
@@ -925,20 +809,7 @@ async function sendMessage(){
     let fullInput=t;
     for(const a of atts){if(a.extractedText)fullInput+='\n\n[Data from '+a.name+']:\n'+a.extractedText}
     if(!fullInput.trim() && atts.length) fullInput = 'I have attached some files but provided no text.';
-    
-    // HYBRID ARCHITECTURE: Try Gemini first, fallback to offline rules engine
-    let resp;
-    if(localStorage.getItem(API_KEY_STORAGE)) {
-        if(!genAI) await initGemini(); // Ensure it's loaded
-        if(genAI) {
-            resp = await generateGeminiAnalysis(fullInput, atts);
-        }
-    }
-    
-    if(!resp) {
-        // Fallback to offline rule-based AI
-        resp = generateAnalysis(fullInput);
-    }
+    const resp = generateAnalysis(fullInput);
     
     removeTyping();
     addMessage(resp,false);
@@ -952,23 +823,6 @@ function exportChat(){if(!chatHistory.length)return;let t='══ APEX FINANCIAL
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
 document.addEventListener('click',e=>{const s=document.getElementById('sidebar'),t=document.getElementById('sidebar-toggle');if(window.innerWidth<=768&&s.classList.contains('open')&&!s.contains(e.target)&&!t.contains(e.target))s.classList.remove('open')});
 userInput.focus();
-</script>
-<!-- API Key Modal -->
-<div class="modal-overlay" id="api-key-modal">
-    <div class="modal-content">
-        <h2>Connect Gemini 1.5</h2>
-        <p>To read full PDFs and perform elite Wall Street strategy analysis, you need to connect Google's Gemini 1.5 AI.</p>
-        <input type="password" id="api-key-input" placeholder="Paste your Gemini API Key here...">
-        <button class="modal-btn" onclick="saveApiKey()">Connect Hybrid Engine</button>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="modal-link">Get a free API key from Google AI Studio</a>
-        <br>
-        <a href="#" onclick="document.getElementById('api-key-modal').classList.remove('visible'); addMessage('Falling back to Offline Rules Engine.', false)" class="modal-link" style="color:var(--text-muted);margin-top:15px">Skip & Use Offline Rules Engine</a>
-    </div>
-</div>
-
-<script type="module">
-    import { GoogleGenerativeAI } from 'https://esm.run/@google/generative-ai';
-    window.GoogleGenerativeAI = GoogleGenerativeAI;
 </script>
 
 </body>
