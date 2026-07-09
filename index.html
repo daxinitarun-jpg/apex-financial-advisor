@@ -469,7 +469,6 @@ async function generateGeminiAnalysis(promptText, attachments) {
     }
 
     const modelsToTry = [
-        { name: "gemini-1.5-flash", config: { systemInstruction: SYSTEM_PROMPT } },
         { name: "gemini-1.5-pro", config: { systemInstruction: SYSTEM_PROMPT } },
         { name: "gemini-pro", config: {} }
     ];
