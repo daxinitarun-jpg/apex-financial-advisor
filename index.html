@@ -13,6 +13,11 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- PDF.js for parsing PDF attachments -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Marked for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
 <style>
 :root {
     --bg-primary: #0a0a0f; --bg-secondary: #111118; --bg-tertiary: #16161f;
@@ -338,13 +343,13 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
             <button class="template-btn" onclick="useTemplate('cost-reduction')"><span class="template-icon">✂️</span><span>Cost Reduction</span></button>
             <button class="template-btn" onclick="useTemplate('compliance')"><span class="template-icon">🛡️</span><span>Compliance Review</span></button>
         </div></div>
-        <div class="sidebar-section"><h3 class="sidebar-section-title">Capabilities</h3><div class="capability-list"><div class="capability-item"><div class="capability-dot"></div><span>P&L Analysis</span></div><div class="capability-item"><div class="capability-dot"></div><span>Balance Sheet Review</span></div><div class="capability-item"><div class="capability-dot"></div><span>Ratio Benchmarking</span></div><div class="capability-item"><div class="capability-dot"></div><span>Forecasting Models</span></div><div class="capability-item"><div class="capability-dot"></div><span>Risk Assessment</span></div></div></div>
+        <div class="sidebar-section"><h3 class="sidebar-section-title">🧠 15 ML Algorithms</h3><div class="capability-list"><div class="capability-item"><div class="capability-dot" style="background:#6366f1"></div><span>Linear Regression</span></div><div class="capability-item"><div class="capability-dot" style="background:#8b5cf6"></div><span>Logistic Regression</span></div><div class="capability-item"><div class="capability-dot" style="background:#a855f7"></div><span>Decision Trees</span></div><div class="capability-item"><div class="capability-dot" style="background:#d946ef"></div><span>Random Forest</span></div><div class="capability-item"><div class="capability-dot" style="background:#ec4899"></div><span>K-Means Clustering</span></div><div class="capability-item"><div class="capability-dot" style="background:#f43f5e"></div><span>Time Series Forecast</span></div><div class="capability-item"><div class="capability-dot" style="background:#ef4444"></div><span>PCA Analysis</span></div><div class="capability-item"><div class="capability-dot" style="background:#f97316"></div><span>Naive Bayes</span></div><div class="capability-item"><div class="capability-dot" style="background:#eab308"></div><span>Association Rules</span></div><div class="capability-item"><div class="capability-dot" style="background:#84cc16"></div><span>Gradient Boosting</span></div><div class="capability-item"><div class="capability-dot" style="background:#22c55e"></div><span>Anomaly Detection</span></div><div class="capability-item"><div class="capability-dot" style="background:#14b8a6"></div><span>Collaborative Filtering</span></div><div class="capability-item"><div class="capability-dot" style="background:#06b6d4"></div><span>A/B Testing</span></div><div class="capability-item"><div class="capability-dot" style="background:#3b82f6"></div><span>NLP Analysis</span></div><div class="capability-item"><div class="capability-dot" style="background:#6366f1"></div><span>Neural Networks</span></div></div></div>
         <div class="sidebar-footer"><div class="footer-badge"><span class="status-dot"></span><span>Free — No Payment Required</span></div></div>
     </aside>
     <button id="sidebar-toggle" class="sidebar-toggle" onclick="toggleSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
     <main class="chat-main">
         <header class="chat-header">
-            <div class="chat-header-left"><h2>Financial Analysis</h2><span class="chat-header-badge">Powered by Apex AI</span></div>
+            <div class="chat-header-left"><h2>Financial Analysis</h2><span class="chat-header-badge">Powered by 15 ML Algorithms</span></div>
             <div class="chat-header-right">
 
                 <button class="header-action-btn" onclick="clearChat()" title="Clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/></svg></button>
@@ -372,12 +377,13 @@ body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--te
             <div id="attachment-preview-area" class="attachment-preview-container hidden"></div>
             <div class="chat-input-container">
                 <div class="input-glow"></div>
-                <input type="file" id="file-upload" class="hidden" multiple onchange="handleFileSelect(event)">
+                <input type="file" id="file-upload" class="hidden" multiple onchange="handleFileSelect(event)" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.xlsx,.xls">
                 <button class="attach-btn" onclick="document.getElementById('file-upload').click()" title="Attach file or photo">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
                 </button>
                 <textarea id="user-input" class="chat-input" placeholder="Enter your financial data or ask a question..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
                 <button id="btn-send" class="send-btn" onclick="sendMessage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg></button>
+                <button id="btn-stop" class="send-btn hidden" style="background: var(--danger-color);" onclick="stopGeneration()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg></button>
             </div>
             <p class="input-disclaimer">Apex Financial Advisor · Free · Verify with a qualified professional</p>
         </div>
@@ -573,8 +579,8 @@ window.onload=function(){
 };
 
 /* ====== CHAT ENGINE ====== */
-let chatHistory=[],isProcessing=false,pendingAttachments=[];
-const chatMessages=document.getElementById('chat-messages'),userInput=document.getElementById('user-input'),welcomeScreen=document.getElementById('welcome-screen'),sendBtn=document.getElementById('btn-send');
+let chatHistory=[],isProcessing=false,pendingAttachments=[],abortController=null;
+const chatMessages=document.getElementById('chat-messages'),userInput=document.getElementById('user-input'),welcomeScreen=document.getElementById('welcome-screen'),sendBtn=document.getElementById('btn-send'),stopBtn=document.getElementById('btn-stop');
 function getTimestamp(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
 function escapeHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,150)+'px'}
@@ -583,155 +589,90 @@ function parseNumber(s){if(s==null)return NaN;s=String(s).trim().toLowerCase();l
 function formatCurrency(n){if(isNaN(n))return'N/A';const a=Math.abs(n),s=n<0?'-':'';if(a>=1e9)return s+'$'+(a/1e9).toFixed(2)+'B';if(a>=1e6)return s+'$'+(a/1e6).toFixed(2)+'M';if(a>=1e3)return s+'$'+(a/1e3).toFixed(1)+'K';return s+'$'+a.toFixed(0)}
 function formatPercent(n){return isNaN(n)?'N/A':n.toFixed(1)+'%'}
 function metricClass(v,g,b,h=true){if(isNaN(v))return'metric-neutral';if(h)return v>=g?'metric-positive':v<=b?'metric-negative':'metric-neutral';return v<=g?'metric-positive':v>=b?'metric-negative':'metric-neutral'}
-function extractFinancialData(t){
-    const d={},l=t.toLowerCase();
-    const p=[
-        {k:['revenue','rev','sales','income','turnover','top line','total income','operating revenue'],f:'revenue'},
-        {k:['cogs','cost of goods','cost of goods sold','direct cost','cost of revenue','cost of sales'],f:'cogs'},
-        {k:['opex','operating expense','operating expenses','operating cost','sg&a','admin expenses'],f:'opex'},
-        {k:['net income','net profit','net earnings','bottom line','pat','profit after tax'],f:'netIncome'},
-        {k:['gross profit','gp','gross margin'],f:'grossProfit'},
-        {k:['total assets','assets'],f:'totalAssets'},
-        {k:['total liabilities','liabilities','total debt'],f:'totalLiabilities'},
-        {k:['equity','shareholders equity','net worth','total equity'],f:'equity'},
-        {k:['current assets'],f:'currentAssets'},
-        {k:['current liabilities'],f:'currentLiabilities'},
-        {k:['inventory','stock','inventories'],f:'inventory'},
-        {k:['depreciation','amortization','d&a'],f:'depreciation'},
-        {k:['interest expense','interest','finance cost','finance costs'],f:'interestExpense'},
-        {k:['tax','taxes','income tax','tax expense'],f:'tax'},
-        {k:['ebitda'],f:'ebitda'},
-        {k:['ebit','operating income','operating profit','pbit'],f:'ebit'},
-        {k:['cash','cash and equivalents','cash balance','cash & bank'],f:'cash'},
-        {k:['accounts receivable','ar','receivables','trade receivables','debtors'],f:'ar'},
-        {k:['accounts payable','ap','payables','trade payables','creditors'],f:'ap'},
-        {k:['capex','capital expenditure','capital expenditures'],f:'capex'},
-        {k:['operating cash flow','ocf','cash from operations','net cash from operating activities'],f:'ocf'},
-        {k:['free cash flow','fcf'],f:'fcf'},
-        {k:['long term debt','long-term debt','non-current liabilities'],f:'longTermDebt'},
-        {k:['retained earnings','reserves','surplus'],f:'retainedEarnings'},
-        {k:['monthly burn','burn rate','monthly expenses'],f:'monthlyBurn'},
-        {k:['employees','headcount','staff','team size'],f:'employees'}
-    ];
-    // Broad NLP-style regex: look for keyword, then optional noise, then a number (handling tabs, spaces, newlines, negative signs)
-    for(const x of p){
-        for(const k of x.k){
-            const r=new RegExp(k+'(?:[^\\d]{0,20}?)[\\-–$₹€£]*([\\d,.]+[kmb]?(?:\\s*(?:crore|lakh|cr|l)s?)?)','i');
-            const mt=l.match(r);
-            if(mt&&!d[x.f]){
-                const v=parseNumber(mt[1]);
-                if(!isNaN(v)) d[x.f]=l.includes(`(${mt[1]})`) || l.includes(`-${mt[1]}`) ? -v : v; // handle negatives
-            }
-        }
-    }
-    return d;
-}
-
-function calculateMetrics(d){
-    const m={};
-    if(d.revenue!==undefined&&d.cogs!==undefined)d.grossProfit=d.grossProfit||(d.revenue-d.cogs);
-    if(d.revenue&&d.grossProfit!==undefined)m.grossMargin=(d.grossProfit/d.revenue)*100;
-    else if(d.revenue&&d.cogs!==undefined)m.grossMargin=((d.revenue-d.cogs)/d.revenue)*100;
-    
-    if(d.netIncome===undefined&&d.revenue!==undefined){const t=(d.cogs||0)+(d.opex||0)+(d.interestExpense||0)+(d.tax||0);if(t>0)d.netIncome=d.revenue-t;}
-    if(d.revenue&&d.netIncome!==undefined)m.netProfitMargin=(d.netIncome/d.revenue)*100;
-    if(d.revenue&&d.opex!==undefined)m.opexRatio=(d.opex/d.revenue)*100;
-    
-    // Liquidity
-    if(d.currentAssets&&d.currentLiabilities)m.currentRatio=d.currentAssets/d.currentLiabilities;
-    if(d.currentAssets&&d.inventory&&d.currentLiabilities)m.quickRatio=(d.currentAssets-d.inventory)/d.currentLiabilities;
-    if(d.currentAssets&&d.currentLiabilities)m.workingCapital=d.currentAssets-d.currentLiabilities;
-    
-    // Leverage & Efficiency
-    if(d.totalLiabilities&&d.equity)m.debtToEquity=d.totalLiabilities/d.equity;
-    if(d.revenue&&d.totalAssets)m.assetTurnover=d.revenue/d.totalAssets;
-    
-    // Profitability & Cash Flow
-    if(d.netIncome!==undefined&&d.totalAssets)m.roa=(d.netIncome/d.totalAssets)*100;
-    if(d.netIncome!==undefined&&d.equity)m.roe=(d.netIncome/d.equity)*100;
-    
-    // EBIT & Interest Coverage
-    if(d.ebit===undefined && d.netIncome!==undefined) d.ebit = d.netIncome + (d.tax||0) + (d.interestExpense||0);
-    if(d.ebit!==undefined && d.interestExpense) m.interestCoverage = d.ebit / d.interestExpense;
-    
-    if(d.ebitda===undefined&&d.ebit!==undefined) d.ebitda=d.ebit+(d.depreciation||0);
-    if(d.ebitda!==undefined&&d.revenue)m.ebitdaMargin=(d.ebitda/d.revenue)*100;
-    
-    if(d.ocf!==undefined && d.capex!==undefined) d.fcf = d.fcf || (d.ocf - d.capex);
-    if(d.fcf!==undefined && d.revenue) m.fcfMargin = (d.fcf/d.revenue)*100;
-
-    if(d.cash&&d.monthlyBurn)m.cashRunway=d.cash/d.monthlyBurn;
-    if(d.opex!==undefined&&m.grossMargin)m.breakEvenRevenue=d.opex/(m.grossMargin/100);
-    return{data:d,metrics:m};
-}
-
-function generateAnalysis(input){const lower=input.toLowerCase().trim();const oos=[/which stock should i buy/i,/buy.*stock/i,/invest in.*stock/i,/stock market/i,/legal advice/i,/tax filing/i,/recipe/i,/weather/i,/joke/i,/poem/i];for(const p of oos)if(p.test(lower))return`I am <strong>Apex Financial Advisor</strong> — designed for financial analysis only. I cannot provide investment advice, legal counsel, or stock predictions.\n\n<div class="recommendation-box"><h4>What I Can Do</h4><ul><li>P&L / Balance Sheet analysis</li><li>Ratio analysis & benchmarking</li><li>Cash flow & profitability</li><li>Scenario planning</li></ul></div>`;const ext=extractFinancialData(input),hasData=Object.keys(ext).length>0,{data,metrics}=calculateMetrics(ext);const userName=currentUser?currentUser.name.split(' ')[0]:'there';if(!hasData&&(/^(hi|hello|hey|good morning|good evening)[\s!.?]*$/i.test(lower)||lower.length<10))return`Welcome, <strong>${userName}</strong>! I'm <strong>Apex Financial Advisor</strong>.\n\n<div class="recommendation-box"><h4>How to Use</h4><ul><li><strong>Share numbers:</strong> "Revenue: $500K, COGS: $200K, Opex: $250K"</li><li><strong>Ask analysis:</strong> "Calculate my debt-to-equity ratio"</li><li><strong>Scenarios:</strong> "What if revenue drops 20%?"</li></ul></div>`;const sm=lower.match(/what if.*(increase|decrease|drop|rise|grow|reduce|cut|fall|goes up|goes down).*?(\d+)%/i);if(sm&&hasData)return genScenario(input,data,metrics,sm);if(hasData){incrementAnalysis();return genReport(data,metrics)}if(lower.includes('what is')||lower.includes('explain')||lower.includes('define'))return answerConcept(lower);return`I need financial data to analyze.\n\n<div class="recommendation-box"><h4>Example</h4><p><code>Revenue: $500K, COGS: $200K, Opex: $180K</code></p></div>`}
-
-function genReport(d,m){
-    let h='<h3>📋 Executive Summary</h3>';
-    let s='stable',e='🟡',l='Stable';
-    if(d.netIncome!==undefined || d.fcf!==undefined){
-        const isProfitable = (d.netIncome||0) > 0 || (d.fcf||0) > 0;
-        if(isProfitable && (m.netProfitMargin>10 || m.fcfMargin>5)){s='strong';e='🟢';l='Strong & Profitable';}
-        else if(!isProfitable){s='critical';e='🔴';l='Critical Warning — Losses Detected';}
-    }
-    if(m.interestCoverage!==undefined && m.interestCoverage < 1.5) { s='critical'; e='🔴'; l='High Bankruptcy Risk (Low Interest Coverage)'; }
-    
-    h+=`<div class="${s==='strong'?'success-box':s==='critical'?'danger-box':'warning-box'}"><h4>${e} ${l}</h4>`;
-    const f=[];
-    if(d.revenue!==undefined) f.push(`Top-Line Revenue: <strong>${formatCurrency(d.revenue)}</strong>`);
-    if(d.netIncome!==undefined) f.push(d.netIncome>=0?`Net Income: <strong>${formatCurrency(d.netIncome)}</strong>`:`Net Loss: <strong>${formatCurrency(d.netIncome)}</strong>`);
-    if(d.fcf!==undefined) f.push(`Free Cash Flow: <strong>${formatCurrency(d.fcf)}</strong>`);
-    if(m.grossMargin!==undefined) f.push(`Gross Margin: <strong>${formatPercent(m.grossMargin)}</strong>`);
-    if(f.length)h+=`<ul>${f.map(x=>`<li>${x}</li>`).join('')}</ul>`;
-    h+=`</div><h3>📊 Deep Financial Ratios</h3><table><tr><th>Metric</th><th>Value</th><th>Status</th></tr>`;
-    
-    if(d.revenue!==undefined)h+=`<tr><td>Revenue</td><td><span class="metric-highlight metric-neutral">${formatCurrency(d.revenue)}</span></td><td>—</td></tr>`;
-    if(m.grossMargin!==undefined)h+=`<tr><td>Gross Margin</td><td><span class="metric-highlight ${metricClass(m.grossMargin,50,20)}">${formatPercent(m.grossMargin)}</span></td><td>${m.grossMargin>=50?'✅':m.grossMargin>=30?'🟡':'🔴'}</td></tr>`;
-    if(m.netProfitMargin!==undefined)h+=`<tr><td>Net Margin</td><td><span class="metric-highlight ${metricClass(m.netProfitMargin,10,0)}">${formatPercent(m.netProfitMargin)}</span></td><td>${m.netProfitMargin>15?'✅':m.netProfitMargin>0?'🟡':'🔴'}</td></tr>`;
-    if(m.ebitdaMargin!==undefined)h+=`<tr><td>EBITDA Margin</td><td><span class="metric-highlight ${metricClass(m.ebitdaMargin,20,5)}">${formatPercent(m.ebitdaMargin)}</span></td><td>${m.ebitdaMargin>20?'✅':m.ebitdaMargin>5?'🟡':'🔴'}</td></tr>`;
-    
-    if(m.currentRatio!==undefined)h+=`<tr><td>Current Ratio</td><td><span class="metric-highlight ${metricClass(m.currentRatio,1.5,1)}">${m.currentRatio.toFixed(2)}</span></td><td>${m.currentRatio>=2?'✅':m.currentRatio>=1?'🟡':'🔴'}</td></tr>`;
-    if(m.quickRatio!==undefined)h+=`<tr><td>Quick Ratio (Acid)</td><td><span class="metric-highlight ${metricClass(m.quickRatio,1,0.5)}">${m.quickRatio.toFixed(2)}</span></td><td>${m.quickRatio>=1?'✅':m.quickRatio>=0.5?'🟡':'🔴'}</td></tr>`;
-    
-    if(m.debtToEquity!==undefined)h+=`<tr><td>D/E Ratio</td><td><span class="metric-highlight ${metricClass(m.debtToEquity,1,2,false)}">${m.debtToEquity.toFixed(2)}</span></td><td>${m.debtToEquity<=1?'✅':m.debtToEquity<=2?'🟡':'🔴'}</td></tr>`;
-    if(m.interestCoverage!==undefined)h+=`<tr><td>Interest Coverage</td><td><span class="metric-highlight ${metricClass(m.interestCoverage,3,1.5)}">${m.interestCoverage.toFixed(2)}x</span></td><td>${m.interestCoverage>=3?'✅':m.interestCoverage>=1.5?'🟡':'🔴'}</td></tr>`;
-    
-    if(m.assetTurnover!==undefined)h+=`<tr><td>Asset Turnover</td><td><span class="metric-highlight ${metricClass(m.assetTurnover,1,0.5)}">${m.assetTurnover.toFixed(2)}x</span></td><td>${m.assetTurnover>=1?'✅':'🟡'}</td></tr>`;
-    if(m.roe!==undefined)h+=`<tr><td>ROE</td><td><span class="metric-highlight ${metricClass(m.roe,15,5)}">${formatPercent(m.roe)}</span></td><td>${m.roe>=15?'✅':'🟡'}</td></tr>`;
-    if(m.roa!==undefined)h+=`<tr><td>ROA</td><td><span class="metric-highlight ${metricClass(m.roa,5,2)}">${formatPercent(m.roa)}</span></td><td>${m.roa>=5?'✅':'🟡'}</td></tr>`;
-    h+=`</table>`;
-    
-    h+=`<h3>🎯 Strategic Actions</h3>`;
-    const r=[];
-    if(m.interestCoverage!==undefined && m.interestCoverage < 1.5) r.push(`<div class="danger-box"><h4>🔴 Debt Restructuring Needed</h4><p>Your EBIT barely covers interest expenses (${m.interestCoverage.toFixed(1)}x). High risk of default.</p></div>`);
-    if(d.netIncome!==undefined&&d.netIncome<0) r.push(`<div class="danger-box"><h4>🔴 Address Operating Losses</h4><p>Losing ${formatCurrency(Math.abs(d.netIncome))}. Audit OpEx and underperforming assets immediately.</p></div>`);
-    if(m.quickRatio!==undefined && m.quickRatio < 0.5) r.push(`<div class="danger-box"><h4>🔴 Severe Liquidity Crunch</h4><p>Quick Ratio is ${m.quickRatio.toFixed(2)}. You lack liquid assets to cover short-term liabilities without selling inventory.</p></div>`);
-    
-    if(m.opexRatio!==undefined&&m.opexRatio>55) r.push(`<div class="warning-box"><h4>⚠️ Optimize Operating Expenses</h4><p>OpEx is consuming ${formatPercent(m.opexRatio)} of revenue.</p></div>`);
-    if(d.fcf!==undefined && d.fcf < 0) r.push(`<div class="warning-box"><h4>⚠️ Negative Free Cash Flow</h4><p>FCF is ${formatCurrency(d.fcf)}. Re-evaluate CAPEX spending vs operating cash generation.</p></div>`);
-    
-    if(m.grossMargin!==undefined&&m.grossMargin>=60) r.push(`<div class="success-box"><h4>✅ Strong Pricing Power</h4><p>Gross margin of ${formatPercent(m.grossMargin)} indicates excellent product economics. Invest in sales & marketing.</p></div>`);
-    if(d.fcf!==undefined && d.fcf > 0) r.push(`<div class="success-box"><h4>✅ Healthy Cash Generation</h4><p>Positive FCF of ${formatCurrency(d.fcf)} gives room for dividends, debt paydown, or acquisitions.</p></div>`);
-    
-    if(!r.length) r.push(`<div class="recommendation-box"><h4>📋 Next Steps</h4><p>Provide more balance sheet data (Assets, Liabilities, Interest) for deeper structural analysis.</p></div>`);
-    h+=r.join('');
-    h+=`<div class="separator"></div><p style="font-size:0.78rem;color:var(--text-muted);font-style:italic">Generated by Apex Rules Engine. Verify with a qualified financial professional.</p>`;
-    return h;
-}
-
-function genScenario(input,d,m,match){const dir=match[1].toLowerCase(),pct=parseFloat(match[2]),up=['increase','rise','grow','goes up'].some(w=>dir.includes(w)),f=up?1+pct/100:1-pct/100;let h=`<h3>🔮 Scenario: ${pct}% ${up?'Increase':'Decrease'}</h3><table><tr><th>Metric</th><th>Current</th><th>Projected</th></tr>`;if(d.revenue){const nr=d.revenue*f;h+=`<tr><td>Revenue</td><td>${formatCurrency(d.revenue)}</td><td>${formatCurrency(nr)}</td></tr>`;if(d.cogs!==undefined&&d.opex!==undefined){const nn=nr-d.cogs-d.opex;h+=`<tr><td>Net Income</td><td>${formatCurrency(d.netIncome)}</td><td><span class="metric-highlight ${nn>=0?'metric-positive':'metric-negative'}">${formatCurrency(nn)}</span></td></tr>`}}h+=`</table>`;incrementAnalysis();return h}
-
-function answerConcept(q){const c={'gross margin':{t:'Gross Margin',f:'(Revenue-COGS)/Revenue×100',b:'SaaS:70-85% | Retail:25-50%'},'net profit':{t:'Net Profit Margin',f:'Net Income/Revenue×100',b:'Healthy:>10%'},'current ratio':{t:'Current Ratio',f:'Current Assets/Current Liabilities',b:'Strong:>2 | OK:1-2'},'debt.to.equity|debt to equity':{t:'D/E Ratio',f:'Liabilities/Equity',b:'Conservative:<0.5'},'ebitda':{t:'EBITDA',f:'NI+Int+Tax+Dep+Amort',b:'Margin>20%'},'break.even|breakeven':{t:'Break-Even',f:'Fixed Costs/Gross Margin%',b:'Exceed by 20%+'},'burn rate|runway':{t:'Cash Runway',f:'Cash/Monthly Burn',b:'12+mo Safe'}};for(const[p,i] of Object.entries(c))if(new RegExp(p,'i').test(q))return`<h3>📖 ${i.t}</h3><table><tr><th>Formula</th><td><code>${i.f}</code></td></tr><tr><th>Benchmark</th><td>${i.b}</td></tr></table><div class="recommendation-box"><h4>💡 Try It</h4><p>Share your data and I'll calculate.</p></div>`;return`<div class="recommendation-box"><h4>📖 I Can Explain</h4><ul><li>Margins, EBITDA, Ratios</li><li>ROI, ROE, ROA</li><li>Break-Even, Runway</li></ul></div>`}
-
 function useTemplate(t){const m={'health-check':'Revenue: $\nCOGS: $\nOperating Expenses: $\nCash Balance: $','ratio-analysis':'Revenue: $\nNet Income: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $','cash-flow':'Cash Balance: $\nMonthly Revenue: $\nMonthly Expenses: $','scenario':'Revenue: $50K\nCOGS: $20K\nOpex: $25K\n\nWhat if revenue increases by 20%?','cost-reduction':'Revenue: $\nCOGS: $\nOperating Expenses: $\nEmployees: \nMonthly Burn: $','compliance':'Revenue: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $'};userInput.value=m[t]||'';userInput.focus();autoResize(userInput);document.getElementById('sidebar').classList.remove('open')}
+
+// ============================================================
+// FILE UPLOAD SAFETY
+// ============================================================
+const ALLOWED_FILE_TYPES = {
+    'application/pdf': {ext: '.pdf', maxSizeMB: 25},
+    'image/png': {ext: '.png', maxSizeMB: 10},
+    'image/jpeg': {ext: '.jpg', maxSizeMB: 10},
+    'image/gif': {ext: '.gif', maxSizeMB: 5},
+    'image/webp': {ext: '.webp', maxSizeMB: 10},
+    'text/plain': {ext: '.txt', maxSizeMB: 5},
+    'text/csv': {ext: '.csv', maxSizeMB: 10},
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {ext: '.xlsx', maxSizeMB: 15},
+    'application/vnd.ms-excel': {ext: '.xls', maxSizeMB: 15},
+};
+const BLOCKED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.js', '.vbs', '.msi', '.dll', '.sys', '.com', '.scr', '.pif', '.jar', '.py', '.rb', '.php', '.pl', '.cgi'];
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB absolute max
+const MAX_FILES_AT_ONCE = 5;
+
+function validateFile(file) {
+    const errors = [];
+    const fileName = file.name.toLowerCase();
+    const fileExt = '.' + fileName.split('.').pop();
+    
+    // 1. Check blocked extensions (not just MIME type)
+    if (BLOCKED_EXTENSIONS.includes(fileExt)) {
+        errors.push(`Blocked file type: ${fileExt} files are not allowed for security.`);
+        return errors;
+    }
+    
+    // 2. Validate MIME type (content-based, not just extension)
+    const allowedType = ALLOWED_FILE_TYPES[file.type];
+    if (!allowedType && !file.type.startsWith('image/') && !file.type.startsWith('text/')) {
+        errors.push(`Unsupported file type: ${file.type || 'unknown'}. Allowed: PDF, Images, CSV, Excel, Text.`);
+        return errors;
+    }
+    
+    // 3. Check file size
+    const maxSize = allowedType ? allowedType.maxSizeMB * 1024 * 1024 : MAX_FILE_SIZE_BYTES;
+    if (file.size > maxSize) {
+        const limitMB = allowedType ? allowedType.maxSizeMB : 25;
+        errors.push(`File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB (max ${limitMB}MB for ${fileExt}).`);
+    }
+    
+    // 4. Check for empty files
+    if (file.size === 0) {
+        errors.push(`Empty file: ${file.name} has no content.`);
+    }
+    
+    // 5. Validate filename (no path traversal)
+    if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+        errors.push(`Invalid filename: contains forbidden characters.`);
+    }
+    
+    // 6. Filename length
+    if (file.name.length > 255) {
+        errors.push(`Filename too long (max 255 characters).`);
+    }
+    
+    return errors;
+}
 
 async function handleFileSelect(e){
     const files=Array.from(e.target.files);
+    
+    // Limit number of files at once
+    if (files.length > MAX_FILES_AT_ONCE) {
+        addMessage(`<div class="warning-box"><p>⚠️ Too many files. Maximum ${MAX_FILES_AT_ONCE} files at once.</p></div>`, false);
+        e.target.value='';
+        return;
+    }
+    
     for(const file of files){
+        // SECURITY: Validate every file before processing
+        const validationErrors = validateFile(file);
+        if (validationErrors.length > 0) {
+            addMessage(`<div class="danger-box"><h4>🔒 File Rejected: ${escapeHtml(file.name)}</h4><p>${validationErrors.join('<br>')}</p></div>`, false);
+            continue;
+        }
+        
         const isImage=file.type.startsWith('image/');
         const isPdf=file.type==='application/pdf';
-        const att={name:file.name,type:file.type,isImage,data:'',extractedText:''};
+        const att={name:file.name.slice(0, 255),type:file.type,isImage,data:'',extractedText:''};
         
         if(isImage){
             const reader=new FileReader();
@@ -748,6 +689,12 @@ async function handleFileSelect(e){
                 try{
                     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
                     const typedarray=new Uint8Array(evt.target.result);
+                    
+                    // SECURITY: Validate PDF magic bytes (content validation, not just extension)
+                    if (typedarray.length < 5 || String.fromCharCode(...typedarray.slice(0,5)) !== '%PDF-') {
+                        throw new Error('Invalid PDF: file content does not match PDF format.');
+                    }
+                    
                     const pdf=await pdfjsLib.getDocument(typedarray).promise;
                     let fullText='';
                     for(let i=1;i<=pdf.numPages;i++){
@@ -755,10 +702,11 @@ async function handleFileSelect(e){
                         const textContent=await page.getTextContent();
                         fullText+=textContent.items.map(item=>item.str).join(' ')+' \n';
                     }
-                    att.extractedText=fullText;
+                    // SECURITY: Truncate extracted text to prevent payload bombs
+                    att.extractedText=fullText.slice(0, 500000);
                 }catch(err){
                     console.error('PDF parse error:',err);
-                    addMessage("Failed to parse PDF. Please try again.", false);
+                    addMessage(`<div class="danger-box"><p>Failed to parse PDF: ${escapeHtml(err.message || 'Unknown error')}</p></div>`, false);
                 }finally{
                     isProcessing=false;
                     sendBtn.disabled=false;
@@ -768,7 +716,12 @@ async function handleFileSelect(e){
             reader.readAsArrayBuffer(file);
         } else {
             const reader=new FileReader();
-            reader.onload=(evt)=>{att.extractedText=evt.target.result;pendingAttachments.push(att);renderAttachmentPreviews()};
+            reader.onload=(evt)=>{
+                // SECURITY: Truncate text content
+                att.extractedText=(evt.target.result || '').slice(0, 500000);
+                pendingAttachments.push(att);
+                renderAttachmentPreviews();
+            };
             reader.readAsText(file);
         }
     }
@@ -782,28 +735,143 @@ function renderAttachmentPreviews(){
     area.innerHTML=pendingAttachments.map((att,i)=>`<div class="attachment-preview">${att.isImage?`<img src="${att.data}" alt="preview">`:`<div class="file-icon">📄</div>`}<button class="remove-attachment" onclick="removeAttachment(${i})">✕</button></div>`).join('');
 }
 
-function addMessage(c,isUser=false,attachments=[]){if(welcomeScreen)welcomeScreen.classList.add('hidden');const d=document.createElement('div');d.className=`message ${isUser?'message-user':'message-ai'}`;let avatarHTML='◆';if(isUser){if(currentUser&&currentUser.picture)avatarHTML=`<img src="${currentUser.picture}" alt="">`;else if(currentUser)avatarHTML=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);else avatarHTML='👤'}let attachHTML='';if(attachments&&attachments.length>0){attachHTML=`<div class="message-attachments">`+attachments.map(a=>a.isImage?`<img src="${a.data}" class="msg-attachment-img">`:`<div class="msg-attachment-file">📄 ${escapeHtml(a.name)}</div>`).join('')+`</div>`}d.innerHTML=`<div class="message-avatar">${avatarHTML}</div><div class="message-content"><div class="message-bubble">${attachHTML}${isUser?escapeHtml(c):c}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;chatMessages.appendChild(d);scrollToBottom()}
+let chartCounter = 0;
+function addMessage(c,isUser=false,attachments=[]){
+    if(welcomeScreen)welcomeScreen.classList.add('hidden');
+    const d=document.createElement('div');
+    d.className=`message ${isUser?'message-user':'message-ai'}`;
+    
+    let avatarHTML='◆';
+    if(isUser){
+        if(currentUser&&currentUser.picture)avatarHTML=`<img src="${currentUser.picture}" alt="">`;
+        else if(currentUser)avatarHTML=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+        else avatarHTML='👤';
+    }
+    
+    let attachHTML='';
+    if(attachments&&attachments.length>0){
+        attachHTML=`<div class="message-attachments">`+attachments.map(a=>a.isImage?`<img src="${a.data}" class="msg-attachment-img">`:`<div class="msg-attachment-file">📄 ${escapeHtml(a.name)}</div>`).join('')+`</div>`;
+    }
+    
+    // Process markdown and intercept ```chart blocks
+    let parsedContent = '';
+    const chartConfigs = [];
+    
+    if (isUser) {
+        parsedContent = escapeHtml(c);
+    } else {
+        // Regex to find ```chart ... ```
+        const chartRegex = /```chart\s*([\s\S]*?)\s*```/g;
+        let modifiedMarkdown = c.replace(chartRegex, (match, jsonStr) => {
+            chartCounter++;
+            const canvasId = `ai-chart-${chartCounter}`;
+            try {
+                const config = JSON.parse(jsonStr);
+                chartConfigs.push({ id: canvasId, config: config });
+                return `<div class="chart-container" style="position: relative; width: 100%; height: 300px; margin: 15px 0;"><canvas id="${canvasId}"></canvas></div>`;
+            } catch (e) {
+                console.error("Chart parse error:", e);
+                return `[Error rendering chart: Invalid JSON]`;
+            }
+        });
+        parsedContent = marked.parse(modifiedMarkdown);
+    }
+
+    d.innerHTML=`<div class="message-avatar">${avatarHTML}</div><div class="message-content"><div class="message-bubble markdown-body">${attachHTML}${parsedContent}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;
+    chatMessages.appendChild(d);
+    
+    // Render charts after they are added to the DOM
+    chartConfigs.forEach(chartData => {
+        const ctx = document.getElementById(chartData.id);
+        if (ctx) {
+            // Apply dark theme defaults if missing
+            if (chartData.config.options === undefined) chartData.config.options = {};
+            if (chartData.config.options.plugins === undefined) chartData.config.options.plugins = {};
+            if (chartData.config.options.plugins.legend === undefined) {
+                chartData.config.options.plugins.legend = { labels: { color: '#e2e8f0' } };
+            }
+            if (chartData.config.options.scales) {
+                if(chartData.config.options.scales.x) chartData.config.options.scales.x.ticks = {color: '#94a3b8'};
+                if(chartData.config.options.scales.y) chartData.config.options.scales.y.ticks = {color: '#94a3b8'};
+            } else {
+                chartData.config.options.scales = {
+                    x: { ticks: { color: '#94a3b8' } },
+                    y: { ticks: { color: '#94a3b8' } }
+                };
+            }
+            
+            new Chart(ctx, chartData.config);
+        }
+    });
+    
+    scrollToBottom();
+}
 function addTyping(){const d=document.createElement('div');d.className='message message-ai';d.id='typing-indicator';d.innerHTML=`<div class="message-avatar">◆</div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;chatMessages.appendChild(d);scrollToBottom()}
 function removeTyping(){const e=document.getElementById('typing-indicator');if(e)e.remove()}
+function stopGeneration() {
+    if(abortController) {
+        abortController.abort();
+        abortController = null;
+    }
+}
+
 async function sendMessage(){
     const t=userInput.value.trim();
     if((!t&&pendingAttachments.length===0)||isProcessing)return;
-    isProcessing=true;sendBtn.disabled=true;
+    isProcessing=true;sendBtn.classList.add('hidden');stopBtn.classList.remove('hidden');
     const atts=[...pendingAttachments];
     addMessage(t,true,atts);
+    
+    // Save to history before sending
     chatHistory.push({role:'user',content:t,attachments:atts});
+    
     userInput.value='';pendingAttachments=[];renderAttachmentPreviews();autoResize(userInput);
     addTyping();
-    await new Promise(r=>setTimeout(r,600+Math.random()*800));
-    let fullInput=t;
-    for(const a of atts){if(a.extractedText)fullInput+='\n\n[Data from '+a.name+']:\n'+a.extractedText}
-    if(!fullInput.trim() && atts.length) fullInput = 'I have attached some files but provided no text.';
-    const resp = generateAnalysis(fullInput);
     
-    removeTyping();
-    addMessage(resp,false);
-    chatHistory.push({role:'assistant',content:resp});
-    isProcessing=false;sendBtn.disabled=false;userInput.focus();
+    abortController = new AbortController();
+    
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            signal: abortController.signal,
+            body: JSON.stringify({
+                message: t,
+                history: chatHistory.slice(0, -1), // Send history excluding the current message
+                attachments: atts
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const resp = data.response;
+        
+        removeTyping();
+        addMessage(resp,false);
+        chatHistory.push({role:'assistant',content:resp});
+        incrementAnalysis();
+        
+    } catch (error) {
+        console.error("Chat API error:", error);
+        removeTyping();
+        if(error.name === 'AbortError') {
+            const errorMsg = `<div class="warning-box"><p>Generation stopped by user.</p></div>`;
+            addMessage(errorMsg, false);
+            chatHistory.push({role:'assistant',content:errorMsg});
+        } else {
+            const errorMsg = `<div class="danger-box"><h4>Connection Error</h4><p>Could not connect to the local AI backend. The AI might be taking a very long time to read the PDF, or the Python server on port 5001 is not running.</p></div>`;
+            addMessage(errorMsg, false);
+            chatHistory.push({role:'assistant',content:errorMsg});
+        }
+    }
+    
+    isProcessing=false;stopBtn.classList.add('hidden');sendBtn.classList.remove('hidden');sendBtn.disabled=false;userInput.focus();
+    abortController = null;
 }
 function handleKeyDown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
 function startNewChat(){chatHistory=[];chatMessages.innerHTML='';if(welcomeScreen){chatMessages.appendChild(welcomeScreen);welcomeScreen.classList.remove('hidden')}userInput.value='';userInput.focus()}

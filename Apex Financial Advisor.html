@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Financial Advisor — AI Financial Analysis</title>
+    <meta name="description" content="Apex Financial Advisor is a free, AI-powered financial analysis chatbot that provides deep insights into business performance, cash flow, profitability, and compliance.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><path d='M14 2L26 8V20L14 26L2 20V8L14 2Z' stroke='%236366f1' stroke-width='2' fill='none'/><path d='M14 8L20 11V17L14 20L8 17V11L14 8Z' fill='%238b5cf6' opacity='0.6'/></svg>">
+
+<style>
+/* ==========================================
+   APEX FINANCIAL ADVISOR — Design System & Styles
+   ========================================== */
+:root {
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #111118;
+    --bg-tertiary: #16161f;
+    --bg-elevated: #1c1c28;
+    --bg-hover: #22222f;
+    --surface-glass: rgba(255, 255, 255, 0.03);
+    --surface-glass-hover: rgba(255, 255, 255, 0.06);
+    --surface-glass-border: rgba(255, 255, 255, 0.06);
+    --text-primary: #e8e8f0;
+    --text-secondary: #9898aa;
+    --text-tertiary: #5e5e72;
+    --text-muted: #44445a;
+    --accent-primary: #6366f1;
+    --accent-secondary: #8b5cf6;
+    --accent-tertiary: #a78bfa;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+    --accent-glow-strong: rgba(99, 102, 241, 0.3);
+    --success: #34d399;
+    --success-bg: rgba(52, 211, 153, 0.1);
+    --warning: #fbbf24;
+    --warning-bg: rgba(251, 191, 36, 0.1);
+    --danger: #f87171;
+    --danger-bg: rgba(248, 113, 113, 0.1);
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-default: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.12);
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sidebar-width: 300px;
+    --header-height: 64px;
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-full: 9999px;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { font-family: var(--font-primary); background: var(--bg-primary); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
+
+.bg-grid {
+    position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px; z-index: 0; pointer-events: none;
+}
+.bg-glow { position: fixed; border-radius: 50%; filter: blur(120px); z-index: 0; pointer-events: none; animation: float 20s ease-in-out infinite; }
+.bg-glow-1 { width: 600px; height: 600px; background: radial-gradient(circle, rgba(99, 102, 241, 0.08), transparent 70%); top: -10%; left: -5%; animation-delay: 0s; }
+.bg-glow-2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(139, 92, 246, 0.06), transparent 70%); bottom: -10%; right: -5%; animation-delay: -7s; }
+.bg-glow-3 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(167, 139, 250, 0.05), transparent 70%); top: 50%; left: 50%; transform: translate(-50%, -50%); animation-delay: -14s; }
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(30px, -20px) scale(1.05); }
+    50% { transform: translate(-20px, 30px) scale(0.95); }
+    75% { transform: translate(20px, 20px) scale(1.02); }
+}
+
+.app-container { display: flex; height: 100vh; width: 100vw; position: relative; z-index: 1; }
+
+/* --- Sidebar --- */
+.sidebar {
+    width: var(--sidebar-width); min-width: var(--sidebar-width); height: 100vh;
+    background: var(--bg-secondary); border-right: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column; overflow-y: auto; transition: transform var(--transition-base); z-index: 100;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
+.sidebar-header { padding: 20px 20px 16px; border-bottom: 1px solid var(--border-subtle); }
+.logo-group { display: flex; align-items: center; gap: 12px; }
+.logo-icon {
+    width: 44px; height: 44px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    animation: logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.1); }
+    50% { box-shadow: 0 0 20px 4px rgba(99, 102, 241, 0.12); }
+}
+.logo-text h1 {
+    font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #e8e8f0, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.logo-badge { font-size: 0.65rem; font-weight: 600; color: var(--accent-tertiary); text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+.sidebar-nav { padding: 16px 16px 8px; }
+.nav-btn {
+    width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    border: none; border-radius: var(--radius-md); font-family: var(--font-primary);
+    font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all var(--transition-fast);
+}
+.nav-btn-primary {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    color: white; box-shadow: 0 2px 12px rgba(99, 102, 241, 0.25);
+}
+.nav-btn-primary:hover { box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4); transform: translateY(-1px); }
+.nav-btn-primary:active { transform: translateY(0); }
+.sidebar-section { padding: 8px 16px 16px; }
+.sidebar-section-title {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text-tertiary); padding: 12px 8px 8px;
+}
+.template-list { display: flex; flex-direction: column; gap: 2px; }
+.template-btn {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: transparent; border: none; border-radius: var(--radius-sm);
+    color: var(--text-secondary); font-family: var(--font-primary);
+    font-size: 0.825rem; cursor: pointer; transition: all var(--transition-fast); text-align: left;
+}
+.template-btn:hover { background: var(--surface-glass-hover); color: var(--text-primary); }
+.template-icon { font-size: 1rem; width: 24px; text-align: center; flex-shrink: 0; }
+.capability-list { display: flex; flex-direction: column; gap: 8px; padding: 0 8px; }
+.capability-item { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--text-tertiary); }
+.capability-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-primary); opacity: 0.6; flex-shrink: 0; }
+.sidebar-footer { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border-subtle); }
+.footer-badge { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-tertiary); }
+.status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+    box-shadow: 0 0 8px rgba(52, 211, 153, 0.4); animation: pulse 2s ease-in-out infinite; flex-shrink: 0;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.sidebar-toggle {
+    display: none; position: fixed; top: 16px; left: 16px; z-index: 200;
+    width: 42px; height: 42px; border-radius: var(--radius-md);
+    background: var(--bg-elevated); border: 1px solid var(--border-default);
+    color: var(--text-primary); cursor: pointer; align-items: center; justify-content: center;
+    transition: all var(--transition-fast);
+}
+.sidebar-toggle:hover { background: var(--bg-hover); }
+
+/* --- Main Chat --- */
+.chat-main { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; position: relative; }
+.chat-header {
+    height: var(--header-height); min-height: var(--header-height); padding: 0 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(17, 17, 24, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 10;
+}
+.chat-header-left { display: flex; align-items: center; gap: 12px; }
+.chat-header h2 { font-size: 1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
+.chat-header-badge {
+    font-size: 0.65rem; font-weight: 500; color: var(--accent-tertiary);
+    padding: 3px 10px; background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.15); border-radius: var(--radius-full);
+}
+.chat-header-right { display: flex; gap: 6px; }
+.header-action-btn {
+    width: 38px; height: 38px; border-radius: var(--radius-sm);
+    background: transparent; border: 1px solid transparent;
+    color: var(--text-tertiary); cursor: pointer; display: flex;
+    align-items: center; justify-content: center; transition: all var(--transition-fast);
+}
+.header-action-btn:hover { background: var(--surface-glass-hover); border-color: var(--border-default); color: var(--text-primary); }
+
+/* --- Messages --- */
+.chat-messages { flex: 1; overflow-y: auto; padding: 24px 0; scroll-behavior: smooth; }
+.chat-messages::-webkit-scrollbar { width: 6px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
+
+.welcome-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100%; padding: 40px 24px; animation: fadeInUp 0.8s ease-out;
+}
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.welcome-icon-wrapper { position: relative; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
+.welcome-icon-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(99, 102, 241, 0.15); animation: ringPulse 3s ease-in-out infinite; }
+@keyframes ringPulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.15); opacity: 0; } }
+.welcome-icon {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08));
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    display: flex; align-items: center; justify-content: center;
+}
+.welcome-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 10px; text-align: center; }
+.gradient-text { background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.welcome-subtitle { font-size: 0.95rem; color: var(--text-secondary); max-width: 480px; text-align: center; line-height: 1.6; margin-bottom: 40px; }
+.welcome-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 560px; width: 100%; }
+.welcome-card {
+    padding: 20px; background: var(--surface-glass); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); cursor: pointer; transition: all var(--transition-base);
+    text-align: left; font-family: var(--font-primary); color: var(--text-primary);
+}
+.welcome-card:hover {
+    background: var(--surface-glass-hover); border-color: rgba(99, 102, 241, 0.2);
+    transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+.welcome-card-icon { font-size: 1.5rem; margin-bottom: 10px; }
+.welcome-card h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+.welcome-card p { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* Message Bubbles */
+.message { padding: 6px 28px; display: flex; gap: 16px; animation: messageIn 0.4s ease-out; max-width: 100%; }
+@keyframes messageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.message-user { flex-direction: row-reverse; }
+.message-avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-size: 0.85rem; font-weight: 600; margin-top: 4px;
+}
+.message-ai .message-avatar {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.2); color: var(--accent-tertiary);
+}
+.message-user .message-avatar {
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(34, 197, 94, 0.08));
+    border: 1px solid rgba(52, 211, 153, 0.2); color: var(--success);
+}
+.message-content { max-width: 720px; min-width: 0; }
+.message-user .message-content { text-align: right; }
+.message-bubble { padding: 14px 18px; border-radius: var(--radius-lg); font-size: 0.9rem; line-height: 1.7; word-wrap: break-word; overflow-wrap: break-word; }
+.message-ai .message-bubble {
+    background: var(--bg-tertiary); border: 1px solid var(--border-subtle);
+    border-top-left-radius: 4px; color: var(--text-primary);
+}
+.message-user .message-bubble {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    color: white; border-top-right-radius: 4px; display: inline-block;
+}
+.message-timestamp { font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; padding: 0 4px; }
+.message-bubble h3 { font-size: 0.95rem; font-weight: 700; color: var(--accent-tertiary); margin: 16px 0 8px 0; letter-spacing: -0.01em; }
+.message-bubble h3:first-child { margin-top: 0; }
+.message-bubble strong { color: var(--text-primary); font-weight: 600; }
+.message-bubble ul, .message-bubble ol { margin: 8px 0; padding-left: 20px; }
+.message-bubble li { margin: 4px 0; color: var(--text-secondary); }
+.message-bubble li strong { color: var(--text-primary); }
+.message-bubble code { font-family: var(--font-mono); font-size: 0.82rem; background: rgba(99, 102, 241, 0.1); color: var(--accent-tertiary); padding: 2px 6px; border-radius: 4px; }
+.message-bubble .metric-highlight {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+    border-radius: var(--radius-sm); font-family: var(--font-mono);
+    font-size: 0.85rem; font-weight: 600; margin: 2px 0;
+}
+.metric-positive { background: var(--success-bg); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.15); }
+.metric-negative { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.15); }
+.metric-neutral { background: rgba(99, 102, 241, 0.08); color: var(--accent-tertiary); border: 1px solid rgba(99, 102, 241, 0.15); }
+.message-bubble table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.85rem; }
+.message-bubble th {
+    padding: 10px 12px; text-align: left; font-weight: 600; color: var(--accent-tertiary);
+    border-bottom: 1px solid var(--border-default); font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+.message-bubble td { padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
+.message-bubble tr:last-child td { border-bottom: none; }
+
+.recommendation-box {
+    margin: 12px 0; padding: 14px 16px;
+    background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.12);
+    border-left: 3px solid var(--accent-primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.recommendation-box h4 { font-size: 0.8rem; font-weight: 600; color: var(--accent-tertiary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.warning-box {
+    margin: 12px 0; padding: 14px 16px;
+    background: var(--warning-bg); border: 1px solid rgba(251, 191, 36, 0.15);
+    border-left: 3px solid var(--warning); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.warning-box h4 { font-size: 0.8rem; font-weight: 600; color: var(--warning); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.danger-box {
+    margin: 12px 0; padding: 14px 16px;
+    background: var(--danger-bg); border: 1px solid rgba(248, 113, 113, 0.15);
+    border-left: 3px solid var(--danger); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.danger-box h4 { font-size: 0.8rem; font-weight: 600; color: var(--danger); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.success-box {
+    margin: 12px 0; padding: 14px 16px;
+    background: var(--success-bg); border: 1px solid rgba(52, 211, 153, 0.15);
+    border-left: 3px solid var(--success); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.success-box h4 { font-size: 0.8rem; font-weight: 600; color: var(--success); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.typing-indicator { display: flex; align-items: center; gap: 5px; padding: 14px 18px; }
+.typing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-primary); opacity: 0.4; animation: typingBounce 1.4s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-8px); opacity: 1; } }
+
+/* Input */
+.chat-input-wrapper { padding: 16px 28px 20px; background: linear-gradient(to top, var(--bg-primary), transparent); }
+.chat-input-container {
+    position: relative; display: flex; align-items: flex-end; gap: 8px;
+    padding: 8px 8px 8px 20px; background: var(--bg-tertiary);
+    border: 1px solid var(--border-default); border-radius: var(--radius-xl);
+    transition: all var(--transition-base);
+}
+.chat-input-container:focus-within {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+.input-glow {
+    position: absolute; inset: -1px; border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    opacity: 0; z-index: -1; transition: opacity var(--transition-base);
+}
+.chat-input-container:focus-within .input-glow { opacity: 0.12; }
+.chat-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text-primary); font-family: var(--font-primary);
+    font-size: 0.9rem; line-height: 1.6; resize: none; max-height: 150px; padding: 6px 0;
+}
+.chat-input::placeholder { color: var(--text-muted); }
+.send-btn {
+    width: 42px; height: 42px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border: none; color: white; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
+.send-btn:hover { box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4); transform: scale(1.05); }
+.send-btn:active { transform: scale(0.95); }
+.input-disclaimer { font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-top: 10px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); box-shadow: 20px 0 60px rgba(0, 0, 0, 0.5); }
+    .sidebar-toggle { display: flex; }
+    .chat-header { padding-left: 68px; }
+    .chat-input-wrapper { padding: 12px 16px 16px; }
+    .message { padding: 6px 16px; }
+    .welcome-cards { grid-template-columns: 1fr; }
+    .welcome-title { font-size: 1.4rem; }
+}
+@media (max-width: 480px) {
+    .welcome-card { padding: 16px; }
+    .welcome-subtitle { font-size: 0.85rem; }
+    .chat-header-badge { display: none; }
+}
+.hidden { display: none !important; }
+.message-section { animation: sectionReveal 0.3s ease-out forwards; opacity: 0; }
+@keyframes sectionReveal { to { opacity: 1; } }
+.message-divider { width: 100%; height: 1px; background: var(--border-subtle); margin: 16px 0; }
+.separator { height: 1px; background: linear-gradient(90deg, transparent, var(--border-default), transparent); margin: 8px 0; }
+</style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <div id="app" class="app-container">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-group">
+                    <div class="logo-icon">
+                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                            <path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="url(#logoGrad)" stroke-width="2" fill="none"/>
+                            <path d="M14 8L20 11V17L14 20L8 17V11L14 8Z" fill="url(#logoGrad)" opacity="0.6"/>
+                            <path d="M14 11L17 12.5V15.5L14 17L11 15.5V12.5L14 11Z" fill="url(#logoGrad)"/>
+                            <defs><linearGradient id="logoGrad" x1="2" y1="2" x2="26" y2="26"><stop stop-color="#6366f1"/><stop offset="0.5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+                        </svg>
+                    </div>
+                    <div class="logo-text">
+                        <h1>Apex Financial Advisor</h1>
+                        <span class="logo-badge">AI Financial Engine</span>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-nav">
+                <button id="btn-new-chat" class="nav-btn nav-btn-primary" onclick="startNewChat()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>New Analysis</span>
+                </button>
+            </div>
+            <div class="sidebar-section">
+                <h3 class="sidebar-section-title">Quick Templates</h3>
+                <div class="template-list">
+                    <button class="template-btn" onclick="useTemplate('health-check')"><span class="template-icon">🩺</span><span>Financial Health Check</span></button>
+                    <button class="template-btn" onclick="useTemplate('ratio-analysis')"><span class="template-icon">📊</span><span>Ratio Analysis</span></button>
+                    <button class="template-btn" onclick="useTemplate('cash-flow')"><span class="template-icon">💰</span><span>Cash Flow Review</span></button>
+                    <button class="template-btn" onclick="useTemplate('scenario')"><span class="template-icon">🔮</span><span>Scenario Planning</span></button>
+                    <button class="template-btn" onclick="useTemplate('cost-reduction')"><span class="template-icon">✂️</span><span>Cost Reduction</span></button>
+                    <button class="template-btn" onclick="useTemplate('compliance')"><span class="template-icon">🛡️</span><span>Compliance Review</span></button>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <h3 class="sidebar-section-title">Capabilities</h3>
+                <div class="capability-list">
+                    <div class="capability-item"><div class="capability-dot"></div><span>P&L Analysis</span></div>
+                    <div class="capability-item"><div class="capability-dot"></div><span>Balance Sheet Review</span></div>
+                    <div class="capability-item"><div class="capability-dot"></div><span>Ratio Benchmarking</span></div>
+                    <div class="capability-item"><div class="capability-dot"></div><span>Forecasting Models</span></div>
+                    <div class="capability-item"><div class="capability-dot"></div><span>Risk Assessment</span></div>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <div class="footer-badge"><span class="status-dot"></span><span>Free — No Account Required</span></div>
+            </div>
+        </aside>
+
+        <!-- Mobile Toggle -->
+        <button id="sidebar-toggle" class="sidebar-toggle" onclick="toggleSidebar()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <!-- Main Chat -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <div class="chat-header-left">
+                    <h2 id="chat-title">Financial Analysis</h2>
+                    <span class="chat-header-badge">Powered by Apex AI Engine</span>
+                </div>
+                <div class="chat-header-right">
+                    <button id="btn-clear" class="header-action-btn" onclick="clearChat()" title="Clear Chat">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/></svg>
+                    </button>
+                    <button id="btn-export" class="header-action-btn" onclick="exportChat()" title="Export Analysis">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21,15v4a2,2,0,0,1-2,2H5a2,2,0,0,1-2-2V15"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                </div>
+            </header>
+
+            <div id="chat-messages" class="chat-messages">
+                <div id="welcome-screen" class="welcome-screen">
+                    <div class="welcome-icon-wrapper">
+                        <div class="welcome-icon-ring"></div>
+                        <div class="welcome-icon">
+                            <svg width="48" height="48" viewBox="0 0 28 28" fill="none">
+                                <path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="url(#wGrad)" stroke-width="1.5" fill="none"/>
+                                <path d="M14 8L20 11V17L14 20L8 17V11L14 8Z" fill="url(#wGrad)" opacity="0.5"/>
+                                <path d="M14 11L17 12.5V15.5L14 17L11 15.5V12.5L14 11Z" fill="url(#wGrad)"/>
+                                <defs><linearGradient id="wGrad" x1="2" y1="2" x2="26" y2="26"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#c084fc"/></linearGradient></defs>
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="welcome-title">Welcome to <span class="gradient-text">Apex Financial Advisor</span></h2>
+                    <p class="welcome-subtitle">Your AI-powered CFO. Provide your financial data and I'll deliver actionable insights in seconds.</p>
+                    <div class="welcome-cards">
+                        <button class="welcome-card" onclick="useTemplate('health-check')"><div class="welcome-card-icon">🩺</div><h4>Health Check</h4><p>Get a complete financial health overview of your business</p></button>
+                        <button class="welcome-card" onclick="useTemplate('ratio-analysis')"><div class="welcome-card-icon">📊</div><h4>Ratio Analysis</h4><p>Calculate and benchmark key financial ratios</p></button>
+                        <button class="welcome-card" onclick="useTemplate('scenario')"><div class="welcome-card-icon">🔮</div><h4>Scenario Planning</h4><p>Model the impact of business decisions</p></button>
+                        <button class="welcome-card" onclick="useTemplate('cash-flow')"><div class="welcome-card-icon">💰</div><h4>Cash Flow</h4><p>Analyze liquidity and working capital</p></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-wrapper">
+                <div class="chat-input-container">
+                    <div class="input-glow"></div>
+                    <textarea id="user-input" class="chat-input" placeholder="Enter your financial data or ask a question..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                    <button id="btn-send" class="send-btn" onclick="sendMessage()" title="Send">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+                    </button>
+                </div>
+                <p class="input-disclaimer">Apex Financial Advisor provides analysis for strategic planning. Verify conclusions with a qualified professional.</p>
+            </div>
+        </main>
+    </div>
+
+<script>
+/* ==========================================
+   APEX FINANCIAL ADVISOR — AI Financial Analysis Engine
+   100% Client-Side — No Firebase, No APIs
+   ========================================== */
+
+let chatHistory = [];
+let isProcessing = false;
+const chatMessages = document.getElementById('chat-messages');
+const userInput = document.getElementById('user-input');
+const welcomeScreen = document.getElementById('welcome-screen');
+const sendBtn = document.getElementById('btn-send');
+
+function getTimestamp() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 150) + 'px'; }
+function scrollToBottom() { chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' }); }
+
+function parseNumber(str) {
+    if (str == null) return NaN;
+    str = String(str).trim().toLowerCase();
+    let m = 1;
+    if (str.endsWith('k')) { m = 1000; str = str.slice(0,-1); }
+    else if (str.endsWith('m')) { m = 1e6; str = str.slice(0,-1); }
+    else if (str.endsWith('b')) { m = 1e9; str = str.slice(0,-1); }
+    else if (/crores?|cr$/.test(str)) { m = 1e7; str = str.replace(/crores?|cr/g,''); }
+    else if (/lakhs?|l$/.test(str)) { m = 1e5; str = str.replace(/lakhs?|l$/g,''); }
+    str = str.replace(/[$₹€£,\s]/g, '');
+    const n = parseFloat(str);
+    return isNaN(n) ? NaN : n * m;
+}
+
+function formatCurrency(n) {
+    if (isNaN(n)) return 'N/A';
+    const a = Math.abs(n), s = n < 0 ? '-' : '';
+    if (a >= 1e9) return s+'$'+(a/1e9).toFixed(2)+'B';
+    if (a >= 1e6) return s+'$'+(a/1e6).toFixed(2)+'M';
+    if (a >= 1e3) return s+'$'+(a/1e3).toFixed(1)+'K';
+    return s+'$'+a.toFixed(0);
+}
+
+function formatPercent(n) { return isNaN(n) ? 'N/A' : n.toFixed(1)+'%'; }
+
+function metricClass(v, good, bad, higher = true) {
+    if (isNaN(v)) return 'metric-neutral';
+    if (higher) return v >= good ? 'metric-positive' : v <= bad ? 'metric-negative' : 'metric-neutral';
+    return v <= good ? 'metric-positive' : v >= bad ? 'metric-negative' : 'metric-neutral';
+}
+
+function extractFinancialData(text) {
+    const data = {}, lower = text.toLowerCase();
+    const patterns = [
+        {keys:['revenue','rev','sales','income','turnover','top line'],field:'revenue'},
+        {keys:['cogs','cost of goods','cost of goods sold','direct cost','direct costs','cost of sales'],field:'cogs'},
+        {keys:['opex','operating expense','operating expenses','operating cost','op expense','overhead'],field:'opex'},
+        {keys:['net income','net profit','net earnings','bottom line','pat','profit after tax'],field:'netIncome'},
+        {keys:['gross profit','gross margin amount','gp'],field:'grossProfit'},
+        {keys:['total assets','assets'],field:'totalAssets'},
+        {keys:['total liabilities','liabilities','total debt'],field:'totalLiabilities'},
+        {keys:['equity','shareholders equity','shareholder equity','net worth','total equity'],field:'equity'},
+        {keys:['current assets','ca'],field:'currentAssets'},
+        {keys:['current liabilities','cl'],field:'currentLiabilities'},
+        {keys:['inventory','stock'],field:'inventory'},
+        {keys:['accounts receivable','receivables','ar','debtors'],field:'accountsReceivable'},
+        {keys:['accounts payable','payables','ap','creditors'],field:'accountsPayable'},
+        {keys:['depreciation','dep','amortization'],field:'depreciation'},
+        {keys:['interest expense','interest','finance cost'],field:'interestExpense'},
+        {keys:['tax','taxes','income tax','tax expense'],field:'tax'},
+        {keys:['ebitda'],field:'ebitda'},
+        {keys:['ebit','operating income','operating profit'],field:'ebit'},
+        {keys:['cash','cash and equivalents','cash balance'],field:'cash'},
+        {keys:['monthly burn','burn rate','monthly expenses','monthly cost'],field:'monthlyBurn'},
+        {keys:['employees','headcount','staff','team size'],field:'employees'},
+    ];
+    for (const p of patterns) {
+        for (const key of p.keys) {
+            const r = new RegExp(key+'[:\\s=\\-–]+\\$?([\\d,.]+[kmb]?(?:\\s*(?:crore|lakh|cr|l)s?)?)','i');
+            const match = lower.match(r);
+            if (match && !data[p.field]) { const v = parseNumber(match[1]); if (!isNaN(v)) data[p.field] = v; }
+        }
+    }
+    for (const p of patterns) {
+        if (data[p.field]) continue;
+        for (const key of p.keys) {
+            const r = new RegExp('\\$?([\\d,.]+[kmb]?)\\s*(?:in\\s+)?'+key,'i');
+            const match = lower.match(r);
+            if (match) { const v = parseNumber(match[1]); if (!isNaN(v)) data[p.field] = v; }
+        }
+    }
+    return data;
+}
+
+function calculateMetrics(data) {
+    const metrics = {};
+    if (data.revenue !== undefined && data.cogs !== undefined) data.grossProfit = data.grossProfit || (data.revenue - data.cogs);
+    if (data.revenue && data.grossProfit !== undefined) metrics.grossMargin = (data.grossProfit / data.revenue) * 100;
+    else if (data.revenue && data.cogs !== undefined) metrics.grossMargin = ((data.revenue - data.cogs) / data.revenue) * 100;
+    if (data.netIncome === undefined && data.revenue !== undefined) {
+        const te = (data.cogs||0)+(data.opex||0)+(data.interestExpense||0)+(data.tax||0);
+        if (te > 0) data.netIncome = data.revenue - te;
+    }
+    if (data.revenue && data.netIncome !== undefined) metrics.netProfitMargin = (data.netIncome / data.revenue) * 100;
+    if (data.revenue && data.opex !== undefined && data.grossProfit !== undefined) metrics.operatingMargin = ((data.grossProfit - data.opex) / data.revenue) * 100;
+    else if (data.ebit !== undefined && data.revenue) metrics.operatingMargin = (data.ebit / data.revenue) * 100;
+    if (data.revenue && data.opex !== undefined) metrics.opexRatio = (data.opex / data.revenue) * 100;
+    if (data.currentAssets && data.currentLiabilities) metrics.currentRatio = data.currentAssets / data.currentLiabilities;
+    if (data.currentAssets && data.currentLiabilities && data.inventory !== undefined) metrics.quickRatio = (data.currentAssets - data.inventory) / data.currentLiabilities;
+    if (data.totalLiabilities && data.equity) metrics.debtToEquity = data.totalLiabilities / data.equity;
+    if (data.netIncome !== undefined && data.totalAssets) metrics.roa = (data.netIncome / data.totalAssets) * 100;
+    if (data.netIncome !== undefined && data.equity) metrics.roe = (data.netIncome / data.equity) * 100;
+    if (data.cash && data.monthlyBurn) metrics.cashRunway = data.cash / data.monthlyBurn;
+    else if (data.cash && data.netIncome !== undefined && data.netIncome < 0) metrics.cashRunway = data.cash / Math.abs(data.netIncome);
+    if (data.revenue && data.employees) metrics.revenuePerEmployee = data.revenue / data.employees;
+    if (data.opex !== undefined && metrics.grossMargin) metrics.breakEvenRevenue = data.opex / (metrics.grossMargin / 100);
+    if (data.ebitda === undefined && data.netIncome !== undefined) data.ebitda = data.netIncome + (data.interestExpense||0) + (data.tax||0) + (data.depreciation||0);
+    if (data.ebitda !== undefined && data.revenue) metrics.ebitdaMargin = (data.ebitda / data.revenue) * 100;
+    return { data, metrics };
+}
+
+function generateAnalysis(input) {
+    const lower = input.toLowerCase().trim();
+    const outOfScope = [/which stock should i buy/i,/buy.*stock/i,/invest in.*stock/i,/what should i invest/i,/stock market prediction/i,/predict.*market/i,/legal advice/i,/tax filing/i,/file.*taxes/i,/audit sign.?off/i,/recipe/i,/weather/i,/joke/i,/poem/i,/song/i,/movie/i];
+    for (const p of outOfScope) {
+        if (p.test(lower)) return `I am <strong>Apex Financial Advisor</strong>, designed specifically for corporate financial analysis, performance benchmarking, and business strategy.\n\nI cannot provide personalized investment advice, legal counsel, stock market predictions, or topics outside business finance.\n\n<div class="recommendation-box"><h4>What I Can Help With</h4><ul><li>Financial statement analysis (P&L, Balance Sheet, Cash Flow)</li><li>Ratio analysis & industry benchmarking</li><li>Cash flow & liquidity assessment</li><li>Cost reduction & profitability analysis</li><li>Scenario planning & forecasting</li><li>Compliance & risk evaluation</li></ul></div>\n\nPlease share your business's financial data, and I'll deliver a comprehensive analysis.`;
+    }
+    const extracted = extractFinancialData(input);
+    const hasData = Object.keys(extracted).length > 0;
+    const {data, metrics} = calculateMetrics(extracted);
+    if (!hasData && (/^(hi|hello|hey|good morning|good evening|sup|yo)[\s!.?]*$/i.test(lower) || lower.length < 10))
+        return `Welcome. I'm <strong>Apex Financial Advisor</strong>, your AI financial analysis engine.\n\nI'm ready to analyze your business financials. Here's how to get started:\n\n<div class="recommendation-box"><h4>How to Use</h4><ul><li><strong>Share your numbers:</strong> e.g., "Revenue: $500K, COGS: $200K, Opex: $250K"</li><li><strong>Ask for a specific analysis:</strong> e.g., "Calculate my debt-to-equity ratio"</li><li><strong>Run a scenario:</strong> e.g., "What if revenue drops 20%?"</li><li><strong>Use a template:</strong> Click one of the Quick Templates in the sidebar</li></ul></div>\n\nWhat financial data would you like me to analyze?`;
+    const scenarioMatch = lower.match(/what if.*(increase|decrease|drop|rise|grow|reduce|cut|fall|goes up|goes down).*?(\d+)%/i);
+    if (scenarioMatch && hasData) return generateScenarioAnalysis(input, data, metrics, scenarioMatch);
+    if (hasData) return generateFinancialReport(data, metrics, input);
+    if (lower.includes('what is')||lower.includes('explain')||lower.includes('define')||lower.includes('how to calculate')) return answerConceptQuestion(lower);
+    return `I need specific financial data to perform a meaningful analysis.\n\n<div class="recommendation-box"><h4>Please Provide Data Like</h4><ul><li><strong>Income Statement:</strong> Revenue, COGS, Operating Expenses, Net Income</li><li><strong>Balance Sheet:</strong> Total Assets, Liabilities, Equity, Current Assets/Liabilities</li><li><strong>Cash Flow:</strong> Cash balance, Monthly burn rate</li></ul></div>\n\n<strong>Example Input:</strong>\n<code>Revenue: $500K, COGS: $200K, Opex: $180K, Cash: $300K</code>\n\nOr use a <strong>Quick Template</strong> from the sidebar to get started.`;
+}
+
+function generateFinancialReport(data, metrics) {
+    let h = '<h3>📋 Executive Summary</h3>';
+    let hs='stable',he='🟡',hl='Stable — Monitor Closely';
+    if (data.netIncome !== undefined) {
+        if (data.netIncome>0&&metrics.netProfitMargin>10){hs='strong';he='🟢';hl='Strong — Profitable Operation';}
+        else if(data.netIncome<0){hs='critical';he='🔴';hl='Critical — Operating at a Loss';}
+    }
+    h+=`<div class="${hs==='strong'?'success-box':hs==='critical'?'danger-box':'warning-box'}"><h4>${he} Overall Health: ${hl}</h4>`;
+    const f=[];
+    if(data.netIncome!==undefined) f.push(data.netIncome>=0?`Net Income is positive at <strong>${formatCurrency(data.netIncome)}</strong>`:`Business is operating at a <strong>${formatCurrency(data.netIncome)}</strong> net loss`);
+    if(metrics.grossMargin!==undefined) f.push(`Gross Margin at <strong>${formatPercent(metrics.grossMargin)}</strong> — ${metrics.grossMargin>=50?'healthy pricing power':metrics.grossMargin>=30?'moderate margin':'thin margins, pricing review needed'}`);
+    if(metrics.opexRatio!==undefined) f.push(`OpEx consumes <strong>${formatPercent(metrics.opexRatio)}</strong> of revenue — ${metrics.opexRatio>60?'unsustainably high':metrics.opexRatio>40?'elevated, optimization possible':'well-controlled'}`);
+    if(metrics.currentRatio!==undefined) f.push(`Current Ratio at <strong>${metrics.currentRatio.toFixed(2)}</strong> — ${metrics.currentRatio>=2?'strong liquidity':metrics.currentRatio>=1?'adequate liquidity':'⚠️ liquidity risk'}`);
+    if(metrics.debtToEquity!==undefined) f.push(`Debt-to-Equity at <strong>${metrics.debtToEquity.toFixed(2)}</strong> — ${metrics.debtToEquity<=1?'conservatively leveraged':metrics.debtToEquity<=2?'moderately leveraged':'⚠️ high leverage risk'}`);
+    if(f.length>0) h+=`<ul>${f.slice(0,3).map(x=>`<li>${x}</li>`).join('')}</ul>`;
+    h+=`</div>`;
+    h+=`<h3>📊 Key Financial Metrics</h3><table><tr><th>Metric</th><th>Value</th><th>Assessment</th></tr>`;
+    if(data.revenue!==undefined) h+=`<tr><td>Revenue</td><td><span class="metric-highlight metric-neutral">${formatCurrency(data.revenue)}</span></td><td>—</td></tr>`;
+    if(data.grossProfit!==undefined) h+=`<tr><td>Gross Profit</td><td><span class="metric-highlight ${data.grossProfit>=0?'metric-positive':'metric-negative'}">${formatCurrency(data.grossProfit)}</span></td><td>${data.grossProfit>=0?'Positive':'Negative — COGS exceeds revenue'}</td></tr>`;
+    if(metrics.grossMargin!==undefined) h+=`<tr><td>Gross Margin</td><td><span class="metric-highlight ${metricClass(metrics.grossMargin,50,20)}">${formatPercent(metrics.grossMargin)}</span></td><td>${metrics.grossMargin>=50?'✅ Strong':metrics.grossMargin>=30?'🟡 Moderate':'🔴 Low'}</td></tr>`;
+    if(data.netIncome!==undefined) h+=`<tr><td>Net Income</td><td><span class="metric-highlight ${data.netIncome>=0?'metric-positive':'metric-negative'}">${formatCurrency(data.netIncome)}</span></td><td>${data.netIncome>=0?'✅ Profitable':'🔴 Loss'}</td></tr>`;
+    if(metrics.netProfitMargin!==undefined) h+=`<tr><td>Net Profit Margin</td><td><span class="metric-highlight ${metricClass(metrics.netProfitMargin,10,0)}">${formatPercent(metrics.netProfitMargin)}</span></td><td>${metrics.netProfitMargin>15?'✅ Excellent':metrics.netProfitMargin>5?'🟡 Acceptable':metrics.netProfitMargin>=0?'🟡 Thin':'🔴 Negative'}</td></tr>`;
+    if(metrics.opexRatio!==undefined) h+=`<tr><td>OpEx Ratio</td><td><span class="metric-highlight ${metricClass(metrics.opexRatio,30,60,false)}">${formatPercent(metrics.opexRatio)}</span></td><td>${metrics.opexRatio<=30?'✅ Lean':metrics.opexRatio<=50?'🟡 Moderate':'🔴 High'}</td></tr>`;
+    if(metrics.operatingMargin!==undefined) h+=`<tr><td>Operating Margin</td><td><span class="metric-highlight ${metricClass(metrics.operatingMargin,15,0)}">${formatPercent(metrics.operatingMargin)}</span></td><td>${metrics.operatingMargin>15?'✅ Strong':metrics.operatingMargin>0?'🟡 Positive':'🔴 Operating loss'}</td></tr>`;
+    if(metrics.currentRatio!==undefined) h+=`<tr><td>Current Ratio</td><td><span class="metric-highlight ${metricClass(metrics.currentRatio,1.5,1)}">${metrics.currentRatio.toFixed(2)}</span></td><td>${metrics.currentRatio>=2?'✅ Strong liquidity':metrics.currentRatio>=1?'🟡 Adequate':'🔴 Liquidity risk'}</td></tr>`;
+    if(metrics.quickRatio!==undefined) h+=`<tr><td>Quick Ratio</td><td><span class="metric-highlight ${metricClass(metrics.quickRatio,1,0.5)}">${metrics.quickRatio.toFixed(2)}</span></td><td>${metrics.quickRatio>=1?'✅ Can cover short-term':'🔴 Tight liquidity'}</td></tr>`;
+    if(metrics.debtToEquity!==undefined) h+=`<tr><td>Debt-to-Equity</td><td><span class="metric-highlight ${metricClass(metrics.debtToEquity,1,2,false)}">${metrics.debtToEquity.toFixed(2)}</span></td><td>${metrics.debtToEquity<=1?'✅ Conservative':metrics.debtToEquity<=2?'🟡 Moderate':'🔴 High leverage'}</td></tr>`;
+    if(metrics.roe!==undefined) h+=`<tr><td>Return on Equity</td><td><span class="metric-highlight ${metricClass(metrics.roe,15,5)}">${formatPercent(metrics.roe)}</span></td><td>${metrics.roe>=15?'✅ Strong':metrics.roe>=5?'🟡 Moderate':'🔴 Low'}</td></tr>`;
+    if(metrics.roa!==undefined) h+=`<tr><td>Return on Assets</td><td><span class="metric-highlight ${metricClass(metrics.roa,5,1)}">${formatPercent(metrics.roa)}</span></td><td>${metrics.roa>=5?'✅ Efficient':metrics.roa>=1?'🟡 Moderate':'🔴 Low utilization'}</td></tr>`;
+    if(metrics.ebitdaMargin!==undefined) h+=`<tr><td>EBITDA Margin</td><td><span class="metric-highlight ${metricClass(metrics.ebitdaMargin,15,5)}">${formatPercent(metrics.ebitdaMargin)}</span></td><td>${metrics.ebitdaMargin>=20?'✅ Strong cash generation':metrics.ebitdaMargin>=10?'🟡 Moderate':'🔴 Weak'}</td></tr>`;
+    if(metrics.cashRunway!==undefined) h+=`<tr><td>Cash Runway</td><td><span class="metric-highlight ${metricClass(metrics.cashRunway,12,3)}">${metrics.cashRunway.toFixed(1)} months</span></td><td>${metrics.cashRunway>=12?'✅ Comfortable':metrics.cashRunway>=6?'🟡 Moderate':'🔴 Critical — act now'}</td></tr>`;
+    if(metrics.revenuePerEmployee!==undefined) h+=`<tr><td>Revenue/Employee</td><td><span class="metric-highlight metric-neutral">${formatCurrency(metrics.revenuePerEmployee)}</span></td><td>—</td></tr>`;
+    h+=`</table>`;
+    if(metrics.breakEvenRevenue!==undefined&&data.revenue!==undefined){
+        const gap=metrics.breakEvenRevenue-data.revenue;
+        h+=`<h3>⚖️ Break-Even Analysis</h3>`;
+        if(gap>0) h+=`<div class="warning-box"><h4>⚠️ Below Break-Even</h4><ul><li>Break-even revenue required: <strong>${formatCurrency(metrics.breakEvenRevenue)}</strong></li><li>Current revenue: <strong>${formatCurrency(data.revenue)}</strong></li><li>Revenue gap: <strong>${formatCurrency(gap)}</strong> (${((gap/data.revenue)*100).toFixed(1)}% increase needed)</li></ul></div>`;
+        else h+=`<div class="success-box"><h4>✅ Above Break-Even</h4><ul><li>Break-even revenue: <strong>${formatCurrency(metrics.breakEvenRevenue)}</strong></li><li>Current revenue: <strong>${formatCurrency(data.revenue)}</strong></li><li>Safety margin: <strong>${formatCurrency(Math.abs(gap))}</strong></li></ul></div>`;
+    }
+    h+=`<h3>🎯 Recommended Actions</h3>`;
+    const recs=[];
+    if(data.netIncome!==undefined&&data.netIncome<0) recs.push({t:'danger',title:'🔴 Address Operating Losses',text:`The business is losing <strong>${formatCurrency(Math.abs(data.netIncome))}</strong>. Conduct an immediate OpEx audit: categorize every expense as essential vs. discretionary. Target a minimum 15-20% reduction in discretionary spending within 30 days.`});
+    if(metrics.opexRatio!==undefined&&metrics.opexRatio>55) recs.push({t:'warning',title:'⚠️ Reduce Operating Expense Ratio',text:`OpEx at <strong>${formatPercent(metrics.opexRatio)}</strong> of revenue is elevated. Break down into fixed vs. variable costs. Negotiate vendor contracts, consider automating manual processes, and evaluate headcount efficiency.`});
+    if(metrics.grossMargin!==undefined&&metrics.grossMargin<30) recs.push({t:'warning',title:'⚠️ Improve Gross Margins',text:`A <strong>${formatPercent(metrics.grossMargin)}</strong> gross margin limits profitability. Evaluate supplier terms, consider 5-10% price increases, and optimize product mix.`});
+    if(metrics.currentRatio!==undefined&&metrics.currentRatio<1) recs.push({t:'danger',title:'🔴 Liquidity Risk',text:`Current Ratio below 1.0 means current liabilities exceed current assets. Accelerate receivables, renegotiate payables terms, and consider a short-term credit facility.`});
+    if(metrics.debtToEquity!==undefined&&metrics.debtToEquity>2) recs.push({t:'warning',title:'⚠️ High Leverage',text:`Debt-to-Equity of <strong>${metrics.debtToEquity.toFixed(2)}</strong> indicates high risk. Evaluate refinancing, prioritize debt repayment, and avoid additional debt.`});
+    if(metrics.cashRunway!==undefined&&metrics.cashRunway<6) recs.push({t:'danger',title:'🔴 Critical Cash Runway',text:`Approximately <strong>${metrics.cashRunway.toFixed(1)} months</strong> of runway. Reduce non-essential spend, accelerate revenue, and explore bridge financing.`});
+    if(metrics.grossMargin!==undefined&&metrics.grossMargin>=60) recs.push({t:'success',title:'✅ Strong Pricing Power',text:`<strong>${formatPercent(metrics.grossMargin)}</strong> gross margin — leverage this by investing in scaling revenue through marketing and sales.`});
+    if(metrics.currentRatio!==undefined&&metrics.currentRatio>=2) recs.push({t:'success',title:'✅ Strong Liquidity',text:`Current Ratio of <strong>${metrics.currentRatio.toFixed(2)}</strong> provides comfort. Consider deploying excess working capital into growth or short-term instruments.`});
+    if(recs.length===0) recs.push({t:'rec',title:'📋 Next Steps',text:`Provide more detailed financial data (Balance Sheet, Cash Flow) for deeper analysis including ROE, ROA, Debt-to-Equity, and Cash Runway.`});
+    for(const r of recs){const bc=r.t==='danger'?'danger-box':r.t==='warning'?'warning-box':r.t==='success'?'success-box':'recommendation-box';h+=`<div class="${bc}"><h4>${r.title}</h4><p>${r.text}</p></div>`;}
+    h+=`<div class="separator"></div><p style="font-size:0.78rem;color:var(--text-muted);font-style:italic;">Note: This analysis is generated for strategic planning purposes. Verify conclusions with a qualified professional.</p>`;
+    return h;
+}
+
+function generateScenarioAnalysis(input, data, metrics, match) {
+    const dir=match[1].toLowerCase(),pct=parseFloat(match[2]);
+    const isUp=['increase','rise','grow','goes up'].some(w=>dir.includes(w));
+    const factor=isUp?1+(pct/100):1-(pct/100);
+    let h=`<h3>🔮 Scenario Analysis</h3><div class="recommendation-box"><h4>Scenario Parameters</h4><p>Modeling a <strong>${pct}%</strong> ${isUp?'increase':'decrease'} impact.</p></div>`;
+    let sf='revenue';const lo=input.toLowerCase();
+    if(/cost|cogs|expense/i.test(lo))sf='costs';if(/rev|sales|income|top.?line/i.test(lo))sf='revenue';if(/opex|operating/i.test(lo))sf='opex';
+    h+=`<table><tr><th>Metric</th><th>Current</th><th>Projected</th><th>Change</th></tr>`;
+    if(sf==='revenue'&&data.revenue){const nr=data.revenue*factor;h+=`<tr><td>Revenue</td><td>${formatCurrency(data.revenue)}</td><td>${formatCurrency(nr)}</td><td>${isUp?'📈':'📉'} ${pct}%</td></tr>`;if(data.cogs!==undefined){const ng=nr-data.cogs,nm=(ng/nr)*100;h+=`<tr><td>Gross Profit</td><td>${formatCurrency(data.grossProfit)}</td><td>${formatCurrency(ng)}</td><td>${formatCurrency(ng-data.grossProfit)}</td></tr>`;h+=`<tr><td>Gross Margin</td><td>${formatPercent(metrics.grossMargin)}</td><td>${formatPercent(nm)}</td><td>${nm>metrics.grossMargin?'📈':'📉'} ${Math.abs(nm-metrics.grossMargin).toFixed(1)}pp</td></tr>`;}if(data.cogs!==undefined&&data.opex!==undefined){const nn=nr-data.cogs-data.opex,cn=data.netIncome||data.revenue-data.cogs-data.opex;h+=`<tr><td>Net Income</td><td>${formatCurrency(cn)}</td><td><span class="metric-highlight ${nn>=0?'metric-positive':'metric-negative'}">${formatCurrency(nn)}</span></td><td>${formatCurrency(nn-cn)}</td></tr>`;}}
+    else if(sf==='costs'&&data.cogs!==undefined){const nc=data.cogs*factor;h+=`<tr><td>COGS</td><td>${formatCurrency(data.cogs)}</td><td>${formatCurrency(nc)}</td><td>${isUp?'📈':'📉'} ${pct}%</td></tr>`;if(data.revenue){const ng=data.revenue-nc,nm=(ng/data.revenue)*100;h+=`<tr><td>Gross Margin</td><td>${formatPercent(metrics.grossMargin)}</td><td><span class="metric-highlight ${nm>=40?'metric-positive':nm>=20?'metric-neutral':'metric-negative'}">${formatPercent(nm)}</span></td><td>${Math.abs(nm-metrics.grossMargin).toFixed(1)}pp ${nm>metrics.grossMargin?'📈':'📉'}</td></tr>`;if(data.opex!==undefined){const nn=data.revenue-nc-data.opex;h+=`<tr><td>Net Income</td><td>${formatCurrency(data.netIncome)}</td><td><span class="metric-highlight ${nn>=0?'metric-positive':'metric-negative'}">${formatCurrency(nn)}</span></td><td>${formatCurrency(nn-data.netIncome)}</td></tr>`;}}}
+    else if(sf==='opex'&&data.opex!==undefined){const no=data.opex*factor;h+=`<tr><td>OpEx</td><td>${formatCurrency(data.opex)}</td><td>${formatCurrency(no)}</td><td>${isUp?'📈':'📉'} ${pct}%</td></tr>`;if(data.revenue&&data.cogs!==undefined){const nn=data.revenue-data.cogs-no;h+=`<tr><td>Net Income</td><td>${formatCurrency(data.netIncome)}</td><td><span class="metric-highlight ${nn>=0?'metric-positive':'metric-negative'}">${formatCurrency(nn)}</span></td><td>${formatCurrency(nn-data.netIncome)}</td></tr>`;}}
+    h+=`</table><div class="recommendation-box"><h4>🎯 Strategic Implications</h4><ul><li>Review pricing elasticity before adjusting revenue assumptions</li><li>Model both best-case and worst-case scenarios</li><li>Identify cost categories that can flex if this scenario materializes</li></ul></div>`;
+    h+=`<p style="font-size:0.78rem;color:var(--text-muted);font-style:italic;">Note: Scenario assumes ceteris paribus. Real-world impacts may vary.</p>`;
+    return h;
+}
+
+function answerConceptQuestion(q) {
+    const concepts = {
+        'gross margin':{title:'Gross Margin',formula:'(Revenue - COGS) / Revenue × 100',explanation:'Measures revenue retained after direct costs. Higher = stronger pricing power.',benchmark:'SaaS: 70-85% | Retail: 25-50% | Manufacturing: 25-35%'},
+        'net profit margin':{title:'Net Profit Margin',formula:'Net Income / Revenue × 100',explanation:'Revenue that translates into actual profit after ALL expenses.',benchmark:'Healthy: >10% | Average: 5-10% | Concerning: <5%'},
+        'current ratio':{title:'Current Ratio',formula:'Current Assets / Current Liabilities',explanation:'Ability to pay short-term obligations. Above 1.0 = can cover debts.',benchmark:'Strong: >2.0 | Adequate: 1.0-2.0 | Risk: <1.0'},
+        'debt.to.equity|debt to equity|d/e ratio':{title:'Debt-to-Equity Ratio',formula:'Total Liabilities / Equity',explanation:'How much debt vs. equity finances assets. Higher = more risk.',benchmark:'Conservative: <0.5 | Moderate: 0.5-1.5 | Aggressive: >2.0'},
+        'roi|return on investment':{title:'Return on Investment',formula:'(Net Profit / Cost of Investment) × 100',explanation:'Profitability relative to cost. Fundamental capital efficiency metric.',benchmark:'Excellent: >20% | Good: 10-20% | Acceptable: 5-10%'},
+        'roe|return on equity':{title:'Return on Equity',formula:'Net Income / Equity × 100',explanation:'How effectively profits are generated from shareholders\' investment.',benchmark:'Excellent: >20% | Good: 15-20% | Average: 10-15%'},
+        'ebitda':{title:'EBITDA',formula:'Net Income + Interest + Taxes + Depreciation + Amortization',explanation:'Operational profitability without non-cash charges and financing decisions.',benchmark:'Margin >20% is generally strong'},
+        'break.even|breakeven':{title:'Break-Even Point',formula:'Fixed Costs / Gross Margin %',explanation:'Revenue where total costs equal total revenue — zero profit, zero loss.',benchmark:'Exceed by 20%+ for safety margin'},
+        'burn rate|cash runway':{title:'Cash Runway & Burn Rate',formula:'Cash Balance / Monthly Burn Rate',explanation:'How long cash reserves last at current spend rate.',benchmark:'12+ months: Safe | 6-12: Plan ahead | <6: Critical'},
+        'working capital':{title:'Working Capital',formula:'Current Assets - Current Liabilities',explanation:'Short-term financial health and operational liquidity.',benchmark:'Positive and growing is ideal'}
+    };
+    for(const[p,info] of Object.entries(concepts)){if(new RegExp(p,'i').test(q)) return `<h3>📖 ${info.title}</h3><table><tr><th>Formula</th><td><code>${info.formula}</code></td></tr><tr><th>Benchmarks</th><td>${info.benchmark}</td></tr></table><p>${info.explanation}</p><div class="recommendation-box"><h4>💡 Practical Application</h4><p>Share your financial data and I'll calculate this metric for your business.</p></div>`;}
+    return `Great question! I can explain virtually any financial concept.\n\n<div class="recommendation-box"><h4>📖 Topics I Can Explain</h4><ul><li>Profitability ratios (Gross Margin, Net Margin, EBITDA)</li><li>Liquidity ratios (Current Ratio, Quick Ratio, Working Capital)</li><li>Leverage ratios (Debt-to-Equity, Interest Coverage)</li><li>Efficiency metrics (ROI, ROE, ROA)</li><li>Valuation concepts (Break-Even, Cash Runway, Burn Rate)</li></ul></div>\n\nCould you be more specific about which concept?`;
+}
+
+function useTemplate(t) {
+    const templates = {
+        'health-check':'Here is my financial data for a health check:\nRevenue: $\nCOGS: $\nOperating Expenses: $\nCash Balance: $',
+        'ratio-analysis':'Please calculate key ratios from this data:\nRevenue: $\nNet Income: $\nTotal Assets: $\nTotal Liabilities: $\nShareholders Equity: $\nCurrent Assets: $\nCurrent Liabilities: $',
+        'cash-flow':'Analyze my cash flow position:\nCash Balance: $\nMonthly Revenue: $\nMonthly Expenses: $\nAccounts Receivable: $\nAccounts Payable: $',
+        'scenario':'Current data:\nRevenue: $50K\nCOGS: $20K\nOpex: $25K\n\nWhat if revenue increases by 20%?',
+        'cost-reduction':'Help me find cost reduction opportunities:\nRevenue: $\nCOGS: $\nOperating Expenses: $\nEmployees: \nMonthly Burn: $',
+        'compliance':'Please review for compliance risks:\nRevenue: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $',
+    };
+    userInput.value = templates[t]||'';
+    userInput.focus();
+    autoResize(userInput);
+    document.getElementById('sidebar').classList.remove('open');
+}
+
+function addMessage(content, isUser=false) {
+    if(welcomeScreen) welcomeScreen.classList.add('hidden');
+    const d=document.createElement('div');
+    d.className=`message ${isUser?'message-user':'message-ai'}`;
+    d.innerHTML=`<div class="message-avatar">${isUser?'👤':'◆'}</div><div class="message-content"><div class="message-bubble">${isUser?escapeHtml(content):content}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;
+    chatMessages.appendChild(d);
+    scrollToBottom();
+    return d;
+}
+
+function addTypingIndicator() {
+    const d=document.createElement('div');d.className='message message-ai';d.id='typing-indicator';
+    d.innerHTML=`<div class="message-avatar">◆</div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;
+    chatMessages.appendChild(d);scrollToBottom();
+}
+
+function removeTypingIndicator() { const e=document.getElementById('typing-indicator'); if(e)e.remove(); }
+
+async function sendMessage() {
+    const t=userInput.value.trim(); if(!t||isProcessing)return;
+    isProcessing=true; sendBtn.disabled=true;
+    addMessage(t,true); chatHistory.push({role:'user',content:t});
+    userInput.value=''; autoResize(userInput);
+    addTypingIndicator();
+    await new Promise(r=>setTimeout(r,600+Math.random()*800));
+    const response=generateAnalysis(t);
+    removeTypingIndicator(); addMessage(response,false);
+    chatHistory.push({role:'assistant',content:response});
+    isProcessing=false; sendBtn.disabled=false; userInput.focus();
+}
+
+function handleKeyDown(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+
+function startNewChat() {
+    chatHistory=[];chatMessages.innerHTML='';
+    if(welcomeScreen){chatMessages.appendChild(welcomeScreen);welcomeScreen.classList.remove('hidden');}
+    userInput.value='';userInput.focus();
+}
+
+function clearChat() { startNewChat(); }
+
+function exportChat() {
+    if(chatHistory.length===0)return;
+    let t='═══════════════════════════════════════\n  APEX FINANCIAL ADVISOR — Financial Analysis Report\n  Generated: '+new Date().toLocaleString()+'\n═══════════════════════════════════════\n\n';
+    for(const m of chatHistory){const r=m.role==='user'?'📝 USER':'◆ APEX FINANCIAL ADVISOR';const c=m.content.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"');t+=`${r}:\n${c}\n\n---\n\n`;}
+    t+='\n═══════════════════════════════════════\nNote: For strategic planning purposes only.\n═══════════════════════════════════════\n';
+    const b=new Blob([t],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');
+    a.href=u;a.download=`apex-financial-advisor-report-${new Date().toISOString().slice(0,10)}.txt`;a.click();URL.revokeObjectURL(u);
+}
+
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+document.addEventListener('click',e=>{
+    const s=document.getElementById('sidebar'),t=document.getElementById('sidebar-toggle');
+    if(window.innerWidth<=768&&s.classList.contains('open')&&!s.contains(e.target)&&!t.contains(e.target))s.classList.remove('open');
+});
+
+userInput.focus();
+</script>
+</body>
+</html>
