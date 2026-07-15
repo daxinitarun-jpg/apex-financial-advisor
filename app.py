@@ -20,6 +20,8 @@ import logging
 import re
 from collections import defaultdict
 from functools import wraps
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
 import base64
 import io
 import threading
@@ -43,6 +45,28 @@ logger = logging.getLogger('apex')
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
+
+# ============================================================
+# DATABASE INITIALIZATION
+# ============================================================
+DB_FILE = 'apex_users.db'
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # ============================================================
 # SECURITY 1: RATE LIMITING (Per-IP with Exponential Backoff)
@@ -265,7 +289,52 @@ ALGORITHM_LIST = [
 def index():
     return send_from_directory('.', 'index.html')
 
+@app.route('/api/register', methods=['POST'])
+@rate_limit('public')
+def register():
+    data = request.json
+    name = sanitize_text(data.get('name', ''))
+    email = sanitize_text(data.get('email', ''))
+    password = data.get('password', '')
 
+    if not name or not email or not password:
+        return jsonify({"error": "Name, email, and password are required"}), 400
+
+    password_hash = generate_password_hash(password)
+
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)", (name, email, password_hash))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Email already exists"}), 409
+    finally:
+        conn.close()
+
+    return jsonify({"success": True, "message": "Registration successful"}), 201
+
+@app.route('/api/login', methods=['POST'])
+@rate_limit('public')
+def login():
+    data = request.json
+    email = sanitize_text(data.get('email', ''))
+    password = data.get('password', '')
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT id, name, password_hash FROM users WHERE email = ?", (email,))
+    user = c.fetchone()
+    conn.close()
+
+    if user and check_password_hash(user[2], password):
+        # Successful login
+        return jsonify({"success": True, "user": {"id": user[0], "name": user[1], "email": email}})
+    else:
+        return jsonify({"error": "Invalid email or password"}), 401
 @app.route('/api/chat', methods=['POST'])
 @rate_limit('chat')  # SECURITY 1: Rate limited
 def chat():
