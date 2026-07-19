@@ -5,3 +5,7 @@ gunicorn==23.0.0
 requests==2.32.5
 numpy==2.0.2
 python-dotenv==1.2.1
+beautifulsoup4==4.15.0
+duckduckgo_search==8.1.1
+pytesseract==0.3.13
+pillow==11.3.0
