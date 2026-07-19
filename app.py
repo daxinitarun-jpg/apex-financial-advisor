@@ -18,7 +18,6 @@ import os
 import time
 import logging
 import re
-from groq import Groq
 from collections import defaultdict
 from functools import wraps
 import sqlite3
@@ -211,10 +210,8 @@ def sanitize_text(text):
 # All configuration loaded from environment variables or config.
 # NO hardcoded API keys, tokens, or passwords in source code.
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-
-SERVER_PORT = int(os.environ.get("PORT", "5001"))
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
+SERVER_PORT = int(os.environ.get("APEX_PORT", "5001"))
 SERVER_HOST = os.environ.get("APEX_HOST", "0.0.0.0")
 
 # ============================================================
@@ -438,52 +435,62 @@ def chat():
             else:
                 print("  ℹ️ No numerical data found for algorithms")
 
-        if not GROQ_API_KEY or not groq_client:
-            logger.error("GROQ_API_KEY is not set.")
-            return jsonify({"error": "Server configuration error: Missing Groq API Key. Please configure GROQ_API_KEY in the environment."}), 500
-
-        try:
-            print("  🤖 Calling Groq (Llama 3) API...")
-            
-            chat_completion = groq_client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": SYSTEM_PROMPT
-                    },
-                    {
-                        "role": "user",
-                        "content": final_prompt
+        # Try each model until one works
+        last_error = None
+        for model_name in MODELS_TO_TRY:
+            try:
+                print(f"  🤖 Trying model: {model_name}...")
+                
+                payload = {
+                    "model": model_name,
+                    "prompt": final_prompt,
+                    "system": SYSTEM_PROMPT,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "num_predict": 4096
                     }
-                ],
-                model="llama3-8b-8192",
-                temperature=0.7,
-                max_tokens=4096,
-                stream=False
-            )
-            
-            ai_text = chat_completion.choices[0].message.content
-            
-            # Clean up markdown blocks if model outputs them
-            ai_text = ai_text.strip()
-            if ai_text.startswith("```html"):
-                ai_text = ai_text[7:]
-            if ai_text.startswith("```"):
-                ai_text = ai_text[3:]
-            if ai_text.endswith("```"):
-                ai_text = ai_text[:-3]
-            ai_text = ai_text.strip()
-            
-            print("  ✅ Success with Groq API")
-            return jsonify({
-                "response": ai_text,
-                "algorithms_used": algorithms_used
-            })
-            
-        except Exception as e:
-            logger.error(f"Groq API exception: {str(e)}")
-            print(f"  ❌ Groq API failed: {str(e)}")
-            return jsonify({"error": "Unable to process your request with Groq API. Please try again."}), 500
+                }
+
+                response = requests.post(OLLAMA_URL, json=payload, timeout=300)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_text = result.get('response', '')
+                    
+                    # Clean up markdown blocks if model outputs them
+                    ai_text = ai_text.strip()
+                    if ai_text.startswith("```html"):
+                        ai_text = ai_text[7:]
+                    if ai_text.startswith("```"):
+                        ai_text = ai_text[3:]
+                    if ai_text.endswith("```"):
+                        ai_text = ai_text[:-3]
+                    ai_text = ai_text.strip()
+                    
+                    print(f"  ✅ Success with model: {model_name}")
+                    return jsonify({
+                        "response": ai_text,
+                        "algorithms_used": algorithms_used
+                    })
+                else:
+                    last_error = f"Model {model_name} returned status {response.status_code}"
+                    # SECURITY 4: Log full error server-side only
+                    logger.error(f"Model {model_name} failed: {last_error}")
+                    print(f"  ❌ Model {model_name} failed: {last_error}")
+                    
+            except requests.exceptions.ConnectionError:
+                last_error = "Cannot connect to AI engine"
+                logger.error(f"Ollama connection error from {request.remote_addr}")
+                print(f"  ❌ {last_error}")
+            except Exception as e:
+                last_error = "AI processing error"
+                # SECURITY 4: Log the real error server-side, return generic message to user
+                logger.error(f"Model {model_name} exception: {str(e)}")
+                print(f"  ❌ Model {model_name} failed: {str(e)}")
+
+        # SECURITY 4: Generic error message to user (no internal details)
+        return jsonify({"error": "Unable to process your request. Please try again."}), 500
 
     except Exception as e:
         # SECURITY 4: Never expose stack traces or internal paths to users
@@ -532,11 +539,16 @@ if __name__ == '__main__':
     print("     ✅ Security Headers (XSS, clickjacking, CSRF)")
     print("=" * 55)
     
-    # Check if Groq API is configured
-    if GROQ_API_KEY:
-        print("  ✅ Groq API Key: CONFIGURED")
-    else:
-        print("  ⚠️  Groq API Key: NOT FOUND (Requires GROQ_API_KEY env var)")
+    # Check if Ollama is running
+    try:
+        r = requests.get("http://localhost:11434/api/tags", timeout=3)
+        if r.status_code == 200:
+            models = [m['name'] for m in r.json().get('models', [])]
+            print(f"  ✅ Ollama is running with models: {models}")
+        else:
+            print("  ⚠️  Ollama responded but may have issues")
+    except:
+        print("  ❌ Ollama is NOT running! Start it with: ollama serve")
     
     print(f"  🧠 15 ML Algorithms: LOADED")
     print(f"  🚀 Server starting on http://localhost:{SERVER_PORT}")
