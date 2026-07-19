@@ -214,7 +214,7 @@ def sanitize_text(text):
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-SERVER_PORT = int(os.environ.get("APEX_PORT", "5001"))
+SERVER_PORT = int(os.environ.get("PORT", "5001"))
 SERVER_HOST = os.environ.get("APEX_HOST", "0.0.0.0")
 
 # ============================================================
