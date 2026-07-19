@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Financial Advisor — AI Financial Analysis</title>
+    <meta name="description" content="Apex Financial Advisor is a free, AI-powered financial analysis chatbot for business performance, cash flow, profitability, and compliance.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><path d='M14 2L26 8V20L14 26L2 20V8L14 2Z' stroke='%236366f1' stroke-width='2' fill='none'/><path d='M14 8L20 11V17L14 20L8 17V11L14 8Z' fill='%238b5cf6' opacity='0.6'/></svg>">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- PDF.js for parsing PDF attachments -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Marked for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<style>
+:root {
+    --bg-primary: #0a0a0f; --bg-secondary: #111118; --bg-tertiary: #16161f;
+    --bg-elevated: #1c1c28; --bg-hover: #22222f;
+    --surface-glass: rgba(255,255,255,0.03); --surface-glass-hover: rgba(255,255,255,0.06);
+    --text-primary: #e8e8f0; --text-secondary: #9898aa; --text-tertiary: #5e5e72; --text-muted: #44445a;
+    --accent-primary: #6366f1; --accent-secondary: #8b5cf6; --accent-tertiary: #a78bfa;
+    --success: #34d399; --success-bg: rgba(52,211,153,0.1);
+    --warning: #fbbf24; --warning-bg: rgba(251,191,36,0.1);
+    --danger: #f87171; --danger-bg: rgba(248,113,113,0.1);
+    --border-subtle: rgba(255,255,255,0.05); --border-default: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.12);
+    --font-primary: 'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    --font-mono: 'JetBrains Mono','Fira Code',monospace;
+    --sidebar-width: 300px; --header-height: 64px;
+    --transition-fast: 150ms cubic-bezier(0.4,0,0.2,1);
+    --transition-base: 250ms cubic-bezier(0.4,0,0.2,1);
+    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 20px; --radius-full: 9999px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-primary);background:var(--bg-primary);color:var(--text-primary);overflow:hidden;height:100vh;width:100vw}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:60px 60px;z-index:0;pointer-events:none}
+.bg-glow{position:fixed;border-radius:50%;filter:blur(120px);z-index:0;pointer-events:none;animation:float 20s ease-in-out infinite}
+.bg-glow-1{width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,0.08),transparent 70%);top:-10%;left:-5%}
+.bg-glow-2{width:500px;height:500px;background:radial-gradient(circle,rgba(139,92,246,0.06),transparent 70%);bottom:-10%;right:-5%;animation-delay:-7s}
+.bg-glow-3{width:400px;height:400px;background:radial-gradient(circle,rgba(167,139,250,0.05),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-14s}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(30px,-20px) scale(1.05)}50%{transform:translate(-20px,30px) scale(0.95)}75%{transform:translate(20px,20px) scale(1.02)}}
+
+/* ====== AUTH MODAL ====== */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);animation:fadeIn 0.2s ease-out}
+.modal-overlay.hidden{display:none}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.auth-modal{width:100%;max-width:420px;margin:24px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:var(--radius-xl);overflow:hidden;animation:slideUp 0.3s ease-out;position:relative}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.auth-modal-header{padding:28px 28px 0;text-align:center}
+.auth-modal-logo{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08));border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.auth-modal-header h3{font-size:1.2rem;font-weight:700;margin-bottom:4px}
+.auth-modal-header p{font-size:0.82rem;color:var(--text-secondary)}
+.auth-modal-close{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:var(--radius-sm);background:transparent;border:none;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all var(--transition-fast)}
+.auth-modal-close:hover{background:var(--surface-glass-hover);color:var(--text-primary)}
+.auth-modal-body{padding:24px 28px 28px}
+
+/* Google Sign-In */
+.google-btn{width:100%;padding:13px;border:1px solid #dadce0;border-radius:var(--radius-md);background:white;color:#1f1f1f;font-family:'Google Sans',var(--font-primary);font-size:0.9rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all var(--transition-fast);margin-bottom:8px}
+.google-btn:hover{box-shadow:0 2px 12px rgba(0,0,0,0.15);transform:translateY(-1px)}
+.google-btn:active{transform:translateY(0)}
+.google-icon{width:20px;height:20px;flex-shrink:0}
+.social-btn{width:100%;padding:13px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:#24292e;color:white;font-family:var(--font-primary);font-size:0.88rem;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all var(--transition-fast)}
+.social-btn:hover{background:#2f363d;transform:translateY(-1px)}
+
+.auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.auth-divider span{font-size:0.75rem;color:var(--text-muted);white-space:nowrap}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border-subtle)}
+.auth-tabs{display:flex;gap:4px;background:var(--bg-primary);border-radius:var(--radius-md);padding:4px;margin-bottom:20px}
+.auth-tab{flex:1;padding:10px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text-tertiary);font-family:var(--font-primary);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all var(--transition-fast)}
+.auth-tab.active{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white;box-shadow:0 2px 12px rgba(99,102,241,0.3)}
+.auth-tab:not(.active):hover{color:var(--text-primary);background:var(--surface-glass-hover)}
+.auth-form{display:flex;flex-direction:column;gap:14px}
+.auth-form.hidden{display:none}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:0.76rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em}
+.form-input{padding:11px 14px;background:var(--bg-primary);border:1px solid var(--border-default);border-radius:var(--radius-md);color:var(--text-primary);font-family:var(--font-primary);font-size:0.88rem;outline:none;transition:all var(--transition-fast)}
+.form-input:focus{border-color:rgba(99,102,241,0.5);box-shadow:0 0 0 3px rgba(99,102,241,0.1)}
+.form-input::placeholder{color:var(--text-muted)}
+.password-wrapper{position:relative}.password-wrapper .form-input{padding-right:44px}
+.toggle-password{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:4px}
+.toggle-password:hover{color:var(--text-primary)}
+.auth-btn{padding:13px;border:none;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white;font-family:var(--font-primary);font-size:0.88rem;font-weight:600;cursor:pointer;transition:all var(--transition-fast);margin-top:2px}
+.auth-btn:hover{box-shadow:0 4px 20px rgba(99,102,241,0.4);transform:translateY(-1px)}
+.auth-error{padding:10px 14px;background:var(--danger-bg);border:1px solid rgba(248,113,113,0.15);border-radius:var(--radius-sm);color:var(--danger);font-size:0.82rem;display:none;margin-bottom:12px}
+.auth-error.show{display:block;animation:shake 0.4s ease-out}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.auth-success{padding:10px 14px;background:var(--success-bg);border:1px solid rgba(52,211,153,0.15);border-radius:var(--radius-sm);color:var(--success);font-size:0.82rem;display:none;margin-bottom:12px}
+.auth-success.show{display:block}
+.auth-modal-footer{padding:0 28px 24px;text-align:center;font-size:0.75rem;color:var(--text-muted)}
+
+/* Account Modal */
+.account-modal{width:100%;max-width:460px;margin:24px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:var(--radius-xl);overflow:hidden;animation:slideUp 0.3s ease-out}
+.account-modal-header{padding:24px 28px 20px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between}
+.account-modal-header h3{font-size:1.1rem;font-weight:700}
+.modal-close-btn{width:34px;height:34px;border-radius:var(--radius-sm);background:transparent;border:none;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all var(--transition-fast)}
+.modal-close-btn:hover{background:var(--surface-glass-hover);color:var(--text-primary)}
+.account-modal-body{padding:24px 28px}
+.account-avatar-section{display:flex;align-items:center;gap:20px;margin-bottom:24px}
+.account-avatar{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:white;flex-shrink:0;overflow:hidden}
+.account-avatar.gradient-bg{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary))}
+.account-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.account-name-section h4{font-size:1.05rem;font-weight:600}
+.account-name-section p{font-size:0.82rem;color:var(--text-secondary);margin-top:2px}
+.account-badge{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 10px;border-radius:var(--radius-full);font-size:0.7rem;font-weight:600}
+.account-badge.google-badge{background:rgba(66,133,244,0.1);color:#4285f4;border:1px solid rgba(66,133,244,0.2)}
+.account-badge.email-badge{background:var(--success-bg);color:var(--success);border:1px solid rgba(52,211,153,0.15)}
+.account-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.account-details{display:flex;flex-direction:column;gap:10px}
+.account-detail-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--bg-primary);border-radius:var(--radius-md)}
+.account-detail-label{font-size:0.8rem;color:var(--text-tertiary);font-weight:500}
+.account-detail-value{font-size:0.85rem;color:var(--text-primary);font-weight:500}
+.account-modal-footer-btns{padding:20px 28px;border-top:1px solid var(--border-subtle);display:flex;gap:10px}
+.logout-btn{flex:1;padding:12px;border:1px solid rgba(248,113,113,0.2);border-radius:var(--radius-md);background:var(--danger-bg);color:var(--danger);font-family:var(--font-primary);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all var(--transition-fast)}
+.logout-btn:hover{background:rgba(248,113,113,0.15)}
+.close-modal-btn{flex:1;padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:transparent;color:var(--text-primary);font-family:var(--font-primary);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all var(--transition-fast)}
+.close-modal-btn:hover{background:var(--surface-glass-hover)}
+
+/* ====== APP ====== */
+.app-container{display:flex;height:100vh;width:100vw;position:relative;z-index:1}
+.sidebar{width:var(--sidebar-width);min-width:var(--sidebar-width);height:100vh;background:var(--bg-secondary);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow-y:auto;transition:transform var(--transition-base);z-index:100}
+.sidebar::-webkit-scrollbar{width:4px}.sidebar::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:var(--radius-full)}
+.sidebar-header{padding:20px 20px 16px;border-bottom:1px solid var(--border-subtle)}
+.logo-group{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;border-radius:var(--radius-md);background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:logoPulse 3s ease-in-out infinite}
+@keyframes logoPulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.1)}50%{box-shadow:0 0 20px 4px rgba(99,102,241,0.12)}}
+.logo-text h1{font-size:1.05rem;font-weight:700;letter-spacing:-0.02em;background:linear-gradient(135deg,#e8e8f0,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-badge{font-size:0.65rem;font-weight:600;color:var(--accent-tertiary);text-transform:uppercase;letter-spacing:0.08em;opacity:0.7}
+.sidebar-user{padding:14px;margin:12px 16px 4px;background:var(--surface-glass);border:1px solid var(--border-subtle);border-radius:var(--radius-md);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all var(--transition-fast)}
+.sidebar-user:hover{background:var(--surface-glass-hover);border-color:var(--border-default)}
+.sidebar-user-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:white;flex-shrink:0;overflow:hidden}
+.sidebar-user-avatar.gradient-bg{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary))}
+.sidebar-user-avatar.guest-bg{background:var(--bg-hover);color:var(--text-tertiary);border:1px solid var(--border-default)}
+.sidebar-user-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.sidebar-user-info{flex:1;min-width:0}
+.sidebar-user-name{font-size:0.85rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user-email{font-size:0.7rem;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-nav{padding:12px 16px 8px}
+.nav-btn{width:100%;display:flex;align-items:center;gap:10px;padding:12px 16px;border:none;border-radius:var(--radius-md);font-family:var(--font-primary);font-size:0.875rem;font-weight:500;cursor:pointer;transition:all var(--transition-fast)}
+.nav-btn-primary{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white;box-shadow:0 2px 12px rgba(99,102,241,0.25)}
+.nav-btn-primary:hover{box-shadow:0 4px 20px rgba(99,102,241,0.4);transform:translateY(-1px)}
+.sidebar-section{padding:8px 16px 16px}
+.sidebar-section-title{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-tertiary);padding:12px 8px 8px}
+.template-list{display:flex;flex-direction:column;gap:2px}
+.template-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;background:transparent;border:none;border-radius:var(--radius-sm);color:var(--text-secondary);font-family:var(--font-primary);font-size:0.825rem;cursor:pointer;transition:all var(--transition-fast);text-align:left}
+.template-btn:hover{background:var(--surface-glass-hover);color:var(--text-primary)}
+.template-icon{font-size:1rem;width:24px;text-align:center;flex-shrink:0}
+.capability-list{display:flex;flex-direction:column;gap:8px;padding:0 8px}
+.capability-item{display:flex;align-items:center;gap:10px;font-size:0.8rem;color:var(--text-tertiary)}
+.capability-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-primary);opacity:0.6;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border-subtle)}
+.footer-badge{display:flex;align-items:center;gap:8px;font-size:0.75rem;color:var(--text-tertiary)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 8px rgba(52,211,153,0.4);animation:pulse 2s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.sidebar-toggle{display:none;position:fixed;top:16px;left:16px;z-index:200;width:42px;height:42px;border-radius:var(--radius-md);background:var(--bg-elevated);border:1px solid var(--border-default);color:var(--text-primary);cursor:pointer;align-items:center;justify-content:center}
+.sidebar-toggle:hover{background:var(--bg-hover)}
+
+.chat-main{flex:1;display:flex;flex-direction:column;height:100vh;min-width:0}
+.chat-header{height:var(--header-height);min-height:var(--header-height);padding:0 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle);background:rgba(17,17,24,0.6);backdrop-filter:blur(20px);z-index:10}
+.chat-header-left{display:flex;align-items:center;gap:12px}
+.chat-header h2{font-size:1rem;font-weight:600}
+.chat-header-badge{font-size:0.65rem;font-weight:500;color:var(--accent-tertiary);padding:3px 10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.15);border-radius:var(--radius-full)}
+.chat-header-right{display:flex;gap:6px;align-items:center}
+.header-action-btn{width:38px;height:38px;border-radius:var(--radius-sm);background:transparent;border:1px solid transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition-fast)}
+.header-action-btn:hover{background:var(--surface-glass-hover);border-color:var(--border-default);color:var(--text-primary)}
+.signin-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border:1px solid var(--border-default);border-radius:var(--radius-full);background:var(--surface-glass);cursor:pointer;transition:all var(--transition-fast);font-family:var(--font-primary);font-size:0.8rem;font-weight:500;color:var(--text-secondary)}
+.signin-chip:hover{background:var(--surface-glass-hover);border-color:rgba(99,102,241,0.3);color:var(--text-primary)}
+.signin-chip-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;overflow:hidden}
+.signin-chip-avatar.guest{background:var(--bg-hover);color:var(--text-muted);border:1px solid var(--border-default)}
+.signin-chip-avatar.loggedin{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white}
+.signin-chip-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+.chat-messages{flex:1;overflow-y:auto;padding:24px 0;scroll-behavior:smooth}
+.chat-messages::-webkit-scrollbar{width:6px}.chat-messages::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:var(--radius-full)}
+.welcome-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:40px 24px;animation:fadeInUp 0.8s ease-out}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.welcome-icon-wrapper{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center;margin-bottom:28px}
+.welcome-icon-ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(99,102,241,0.15);animation:ringPulse 3s ease-in-out infinite}
+@keyframes ringPulse{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.15);opacity:0}}
+.welcome-icon{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08));border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center}
+.welcome-title{font-size:1.75rem;font-weight:700;letter-spacing:-0.03em;margin-bottom:10px;text-align:center}
+.gradient-text{background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.welcome-subtitle{font-size:0.95rem;color:var(--text-secondary);max-width:480px;text-align:center;line-height:1.6;margin-bottom:40px}
+.welcome-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:560px;width:100%}
+.welcome-card{padding:20px;background:var(--surface-glass);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);cursor:pointer;transition:all var(--transition-base);text-align:left;font-family:var(--font-primary);color:var(--text-primary)}
+.welcome-card:hover{background:var(--surface-glass-hover);border-color:rgba(99,102,241,0.2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.welcome-card-icon{font-size:1.5rem;margin-bottom:10px}
+.welcome-card h4{font-size:0.9rem;font-weight:600;margin-bottom:6px}
+.welcome-card p{font-size:0.78rem;color:var(--text-secondary);line-height:1.5}
+
+.message{padding:6px 28px;display:flex;gap:16px;animation:messageIn 0.4s ease-out;max-width:100%}
+@keyframes messageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.message-user{flex-direction:row-reverse}
+.message-avatar{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.85rem;font-weight:600;margin-top:4px;overflow:hidden}
+.message-ai .message-avatar{background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));border:1px solid rgba(99,102,241,0.2);color:var(--accent-tertiary)}
+.message-user .message-avatar{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white}
+.message-user .message-avatar img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-md)}
+.message-content{max-width:720px;min-width:0}
+.message-user .message-content{text-align:right}
+.message-bubble{padding:14px 18px;border-radius:var(--radius-lg);font-size:0.9rem;line-height:1.7;word-wrap:break-word}
+.message-ai .message-bubble{background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-top-left-radius:4px}
+.message-user .message-bubble{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white;border-top-right-radius:4px;display:inline-block}
+.message-timestamp{font-size:0.7rem;color:var(--text-muted);margin-top:6px;padding:0 4px}
+.message-bubble h3{font-size:0.95rem;font-weight:700;color:var(--accent-tertiary);margin:16px 0 8px}.message-bubble h3:first-child{margin-top:0}
+.message-bubble strong{color:var(--text-primary);font-weight:600}
+.message-bubble ul,.message-bubble ol{margin:8px 0;padding-left:20px}
+.message-bubble li{margin:4px 0;color:var(--text-secondary)}.message-bubble li strong{color:var(--text-primary)}
+.message-bubble code{font-family:var(--font-mono);font-size:0.82rem;background:rgba(99,102,241,0.1);color:var(--accent-tertiary);padding:2px 6px;border-radius:4px}
+.msg-attachment-file { font-size:0.8rem; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; margin-top:4px; display:inline-block }
+.metric-highlight{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:0.85rem;font-weight:600;margin:2px 0}
+.metric-positive{background:var(--success-bg);color:var(--success);border:1px solid rgba(52,211,153,0.15)}
+.metric-negative{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(248,113,113,0.15)}
+.metric-neutral{background:rgba(99,102,241,0.08);color:var(--accent-tertiary);border:1px solid rgba(99,102,241,0.15)}
+.message-bubble table{width:100%;border-collapse:collapse;margin:12px 0;font-size:0.85rem}
+.message-bubble th{padding:10px 12px;text-align:left;font-weight:600;color:var(--accent-tertiary);border-bottom:1px solid var(--border-default);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em}
+.message-bubble td{padding:8px 12px;border-bottom:1px solid var(--border-subtle);color:var(--text-secondary)}
+.message-bubble tr:last-child td{border-bottom:none}
+.recommendation-box{margin:12px 0;padding:14px 16px;background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.12);border-left:3px solid var(--accent-primary);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.recommendation-box h4{font-size:0.8rem;font-weight:600;color:var(--accent-tertiary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.warning-box{margin:12px 0;padding:14px 16px;background:var(--warning-bg);border:1px solid rgba(251,191,36,0.15);border-left:3px solid var(--warning);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.warning-box h4{font-size:0.8rem;font-weight:600;color:var(--warning);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.danger-box{margin:12px 0;padding:14px 16px;background:var(--danger-bg);border:1px solid rgba(248,113,113,0.15);border-left:3px solid var(--danger);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.danger-box h4{font-size:0.8rem;font-weight:600;color:var(--danger);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.success-box{margin:12px 0;padding:14px 16px;background:var(--success-bg);border:1px solid rgba(52,211,153,0.15);border-left:3px solid var(--success);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.success-box h4{font-size:0.8rem;font-weight:600;color:var(--success);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.typing-indicator{display:flex;align-items:center;gap:5px;padding:14px 18px}
+.typing-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-primary);opacity:0.4;animation:typingBounce 1.4s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:0.2s}.typing-dot:nth-child(3){animation-delay:0.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-8px);opacity:1}}
+.chat-input-wrapper{padding:16px 28px 20px;background:linear-gradient(to top,var(--bg-primary),transparent)}
+.chat-input-container{position:relative;display:flex;align-items:flex-end;gap:8px;padding:8px 8px 8px 20px;background:var(--bg-tertiary);border:1px solid var(--border-default);border-radius:var(--radius-xl);transition:all var(--transition-base)}
+.chat-input-container:focus-within{border-color:rgba(99,102,241,0.4);box-shadow:0 0 0 3px rgba(99,102,241,0.08),0 4px 24px rgba(0,0,0,0.2)}
+.input-glow{position:absolute;inset:-1px;border-radius:var(--radius-xl);background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));opacity:0;z-index:-1;transition:opacity var(--transition-base)}
+.chat-input-container:focus-within .input-glow{opacity:0.12}
+.chat-input{flex:1;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:var(--font-primary);font-size:0.9rem;line-height:1.6;resize:none;max-height:150px;padding:6px 0}
+.chat-input::placeholder{color:var(--text-muted)}
+.send-btn{width:42px;height:42px;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--transition-fast)}
+.send-btn:hover{box-shadow:0 4px 16px rgba(99,102,241,0.4);transform:scale(1.05)}
+.send-btn:active{transform:scale(0.95)}
+.input-disclaimer{font-size:0.7rem;color:var(--text-muted);text-align:center;margin-top:10px}
+.attach-btn{width:42px;height:42px;border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--transition-fast)}
+.attach-btn:hover{color:var(--text-primary);background:var(--surface-glass-hover)}
+.attachment-preview-container{display:flex;gap:10px;padding:0 20px 10px;overflow-x:auto;max-height:100px;scrollbar-width:thin}
+.attachment-preview{position:relative;width:60px;height:60px;border-radius:var(--radius-sm);background:var(--bg-elevated);border:1px solid var(--border-default);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;animation:fadeIn 0.2s}
+.attachment-preview img{width:100%;height:100%;object-fit:cover}
+.attachment-preview .file-icon{font-size:1.5rem;color:var(--accent-primary)}
+.remove-attachment{position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,0.7);color:white;border:none;border-radius:50%;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.remove-attachment:hover{background:rgba(0,0,0,0.9)}
+.message-attachments{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.msg-attachment-img{max-width:200px;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);object-fit:cover}
+.msg-attachment-file{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.15);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-primary)}
+.hidden{display:none!important}
+.separator{height:1px;background:linear-gradient(90deg,transparent,var(--border-default),transparent);margin:8px 0}
+@media(max-width:768px){.sidebar{position:fixed;left:0;top:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0);box-shadow:20px 0 60px rgba(0,0,0,0.5)}.sidebar-toggle{display:flex}.chat-header{padding-left:68px}.chat-input-wrapper{padding:12px 16px 16px}.message{padding:6px 16px}.welcome-cards{grid-template-columns:1fr}.welcome-title{font-size:1.4rem}}
+@media(max-width:480px){.welcome-card{padding:16px}.welcome-subtitle{font-size:0.85rem}.chat-header-badge{display:none}}
+.auth-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.auth-modal {
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    padding: 2rem; border-radius: 12px; width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
+}
+.auth-modal h2 { margin-bottom: 1rem; color: #fff; }
+.auth-modal input {
+    width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px;
+    border: 1px solid var(--border-color); background: var(--bg-tertiary);
+    color: #fff; outline: none; box-sizing: border-box;
+}
+.auth-modal input:focus { border-color: var(--accent-primary); }
+.auth-modal button {
+    width: 100%; padding: 12px; border-radius: 8px; border: none;
+    background: var(--accent-primary); color: #fff; font-weight: bold;
+    cursor: pointer; transition: background 0.2s;
+}
+.auth-modal button:hover { background: var(--accent-hover); }
+.auth-modal .auth-switch {
+    margin-top: 15px; color: var(--text-secondary); font-size: 0.9rem; cursor: pointer;
+}
+.auth-modal .auth-switch:hover { color: #fff; text-decoration: underline; }
+.auth-error { color: #ef4444; margin-bottom: 10px; font-size: 0.9rem; display: none; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+<div class="bg-glow bg-glow-3"></div>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeAuthModal()">
+    <div class="auth-modal">
+        <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+        <div class="auth-modal-header">
+            <div class="auth-modal-logo"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="url(#mG)" stroke-width="1.5" fill="none"/><path d="M14 8L20 11V17L14 20L8 17V11L14 8Z" fill="url(#mG)" opacity="0.5"/><defs><linearGradient id="mG" x1="2" y1="2" x2="26" y2="26"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#c084fc"/></linearGradient></defs></svg></div>
+            <h3>Welcome to Apex</h3>
+            <p>Sign in to save your analysis history</p>
+        </div>
+        <div class="auth-modal-body">
+            <div id="auth-error" class="auth-error"></div>
+            <div id="auth-success" class="auth-success"></div>
+            <!-- Real Google Sign-In Button rendered here -->
+            <div id="google-signin-container" style="display:flex;justify-content:center;margin-bottom:12px"></div>
+            <!-- Fallback Google button (if GIS not loaded) -->
+            <button id="google-btn-fallback" class="google-btn hidden" onclick="googleFallback()">
+                <svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Continue with Google
+            </button>
+            <div class="auth-divider"><span>or use email</span></div>
+            <div class="auth-tabs">
+                <button id="tab-signin" class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
+                <button id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+            <form id="form-signin" class="auth-form" onsubmit="handleSignIn(event)">
+                <div class="form-group"><label class="form-label">Email</label><input id="signin-email" class="form-input" type="email" placeholder="you@example.com" required></div>
+                <div class="form-group"><label class="form-label">Password</label><div class="password-wrapper"><input id="signin-password" class="form-input" type="password" placeholder="Your password" required minlength="6"><button type="button" class="toggle-password" onclick="togglePw('signin-password',this)">👁️</button></div></div>
+                <button type="submit" class="auth-btn">Sign In →</button>
+            </form>
+            <form id="form-signup" class="auth-form hidden" onsubmit="handleSignUp(event)">
+                <div class="form-group"><label class="form-label">Full Name</label><input id="signup-name" class="form-input" type="text" placeholder="Your name" required minlength="2"></div>
+                <div class="form-group"><label class="form-label">Email</label><input id="signup-email" class="form-input" type="email" placeholder="you@example.com" required></div>
+                <div class="form-group"><label class="form-label">Password</label><div class="password-wrapper"><input id="signup-password" class="form-input" type="password" placeholder="Min 6 characters" required minlength="6"><button type="button" class="toggle-password" onclick="togglePw('signup-password',this)">👁️</button></div></div>
+                <button type="submit" class="auth-btn">Create Account →</button>
+            </form>
+        </div>
+        <div class="auth-modal-footer">Free forever · Your data stays in your browser</div>
+    </div>
+</div>
+
+<!-- Account Modal -->
+<div id="account-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeAccountModal()">
+    <div class="account-modal">
+        <div class="account-modal-header"><h3>👤 Account</h3><button class="modal-close-btn" onclick="closeAccountModal()">✕</button></div>
+        <div class="account-modal-body">
+            <div class="account-avatar-section">
+                <div id="modal-avatar" class="account-avatar gradient-bg">J</div>
+                <div class="account-name-section"><h4 id="modal-name">—</h4><p id="modal-email">—</p><div id="modal-badge" class="account-badge email-badge">Active</div></div>
+            </div>
+            <div class="account-details">
+                <div class="account-detail-row"><span class="account-detail-label">Plan</span><span class="account-detail-value">🎁 Free Forever</span></div>
+                <div class="account-detail-row"><span class="account-detail-label">Signed in via</span><span id="modal-provider" class="account-detail-value">Email</span></div>
+                <div class="account-detail-row"><span class="account-detail-label">Member Since</span><span id="modal-joined" class="account-detail-value">—</span></div>
+                <div class="account-detail-row"><span class="account-detail-label">Analyses Run</span><span id="modal-analyses" class="account-detail-value">0</span></div>
+            </div>
+        </div>
+        <div class="account-modal-footer-btns"><button class="logout-btn" onclick="handleLogout()">🚪 Log Out</button><button class="close-modal-btn" onclick="closeAccountModal()">Close</button></div>
+    </div>
+</div>
+
+<!-- ====== APP (opens directly) ====== -->
+<div id="app" class="app-container">
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header"><div class="logo-group"><div class="logo-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="url(#lG)" stroke-width="2" fill="none"/><path d="M14 8L20 11V17L14 20L8 17V11L14 8Z" fill="url(#lG)" opacity="0.6"/><path d="M14 11L17 12.5V15.5L14 17L11 15.5V12.5L14 11Z" fill="url(#lG)"/><defs><linearGradient id="lG" x1="2" y1="2" x2="26" y2="26"><stop stop-color="#6366f1"/><stop offset="0.5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs></svg></div><div class="logo-text"><h1>Apex Financial Advisor</h1><span class="logo-badge">AI Engine</span></div></div></div>
+        <div id="sidebar-user-section" class="sidebar-user" onclick="handleUserClick()">
+            <div id="sidebar-avatar" class="sidebar-user-avatar guest-bg">👤</div>
+            <div class="sidebar-user-info"><div id="sidebar-name" class="sidebar-user-name">Guest User</div><div id="sidebar-email" class="sidebar-user-email">Tap to sign in</div></div>
+        </div>
+        <div class="sidebar-nav"><button class="nav-btn nav-btn-primary" onclick="startNewChat()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>New Analysis</span></button></div>
+        <div class="sidebar-section"><h3 class="sidebar-section-title">Quick Templates</h3><div class="template-list">
+            <button class="template-btn" onclick="useTemplate('health-check')"><span class="template-icon">🩺</span><span>Financial Health Check</span></button>
+            <button class="template-btn" onclick="useTemplate('ratio-analysis')"><span class="template-icon">📊</span><span>Ratio Analysis</span></button>
+            <button class="template-btn" onclick="useTemplate('cash-flow')"><span class="template-icon">💰</span><span>Cash Flow Review</span></button>
+            <button class="template-btn" onclick="useTemplate('scenario')"><span class="template-icon">🔮</span><span>Scenario Planning</span></button>
+            <button class="template-btn" onclick="useTemplate('cost-reduction')"><span class="template-icon">✂️</span><span>Cost Reduction</span></button>
+            <button class="template-btn" onclick="useTemplate('compliance')"><span class="template-icon">🛡️</span><span>Compliance Review</span></button>
+        </div></div>
+        <div class="sidebar-section"><h3 class="sidebar-section-title">🧠 15 ML Algorithms</h3><div class="capability-list"><div class="capability-item"><div class="capability-dot" style="background:#6366f1"></div><span>Linear Regression</span></div><div class="capability-item"><div class="capability-dot" style="background:#8b5cf6"></div><span>Logistic Regression</span></div><div class="capability-item"><div class="capability-dot" style="background:#a855f7"></div><span>Decision Trees</span></div><div class="capability-item"><div class="capability-dot" style="background:#d946ef"></div><span>Random Forest</span></div><div class="capability-item"><div class="capability-dot" style="background:#ec4899"></div><span>K-Means Clustering</span></div><div class="capability-item"><div class="capability-dot" style="background:#f43f5e"></div><span>Time Series Forecast</span></div><div class="capability-item"><div class="capability-dot" style="background:#ef4444"></div><span>PCA Analysis</span></div><div class="capability-item"><div class="capability-dot" style="background:#f97316"></div><span>Naive Bayes</span></div><div class="capability-item"><div class="capability-dot" style="background:#eab308"></div><span>Association Rules</span></div><div class="capability-item"><div class="capability-dot" style="background:#84cc16"></div><span>Gradient Boosting</span></div><div class="capability-item"><div class="capability-dot" style="background:#22c55e"></div><span>Anomaly Detection</span></div><div class="capability-item"><div class="capability-dot" style="background:#14b8a6"></div><span>Collaborative Filtering</span></div><div class="capability-item"><div class="capability-dot" style="background:#06b6d4"></div><span>A/B Testing</span></div><div class="capability-item"><div class="capability-dot" style="background:#3b82f6"></div><span>NLP Analysis</span></div><div class="capability-item"><div class="capability-dot" style="background:#6366f1"></div><span>Neural Networks</span></div></div></div>
+        <div class="sidebar-footer"><div class="footer-badge"><span class="status-dot"></span><span>Free — No Payment Required</span></div></div>
+    </aside>
+    <button id="sidebar-toggle" class="sidebar-toggle" onclick="toggleSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <main class="chat-main">
+        <header class="chat-header">
+            <div class="chat-header-left"><h2>Financial Analysis</h2><span class="chat-header-badge">Powered by 15 ML Algorithms</span></div>
+            <div class="chat-header-right">
+
+                <button class="header-action-btn" onclick="clearChat()" title="Clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/></svg></button>
+                <button class="header-action-btn" onclick="exportChat()" title="Export"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21,15v4a2,2,0,0,1-2,2H5a2,2,0,0,1-2-2V15"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button id="header-user-btn" class="signin-chip" onclick="handleUserClick()">
+                    <div id="header-avatar" class="signin-chip-avatar guest">👤</div>
+                    <span id="header-user-text">Sign In</span>
+                </button>
+            </div>
+        </header>
+        <div id="chat-messages" class="chat-messages">
+            <div id="welcome-screen" class="welcome-screen">
+                <div class="welcome-icon-wrapper"><div class="welcome-icon-ring"></div><div class="welcome-icon"><svg width="48" height="48" viewBox="0 0 28 28" fill="none"><path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="url(#wG)" stroke-width="1.5" fill="none"/><path d="M14 8L20 11V17L14 20L8 17V11L14 8Z" fill="url(#wG)" opacity="0.5"/><path d="M14 11L17 12.5V15.5L14 17L11 15.5V12.5L14 11Z" fill="url(#wG)"/><defs><linearGradient id="wG" x1="2" y1="2" x2="26" y2="26"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#c084fc"/></linearGradient></defs></svg></div></div>
+                <h2 class="welcome-title">Welcome to <span class="gradient-text">Apex Financial Advisor</span></h2>
+                <p class="welcome-subtitle">Your AI-powered CFO. Provide your financial data and get actionable insights.</p>
+                <div class="welcome-cards">
+                    <button class="welcome-card" onclick="useTemplate('health-check')"><div class="welcome-card-icon">🩺</div><h4>Health Check</h4><p>Financial health overview</p></button>
+                    <button class="welcome-card" onclick="useTemplate('ratio-analysis')"><div class="welcome-card-icon">📊</div><h4>Ratio Analysis</h4><p>Key financial ratios</p></button>
+                    <button class="welcome-card" onclick="useTemplate('scenario')"><div class="welcome-card-icon">🔮</div><h4>Scenario Planning</h4><p>Model decision impact</p></button>
+                    <button class="welcome-card" onclick="useTemplate('cash-flow')"><div class="welcome-card-icon">💰</div><h4>Cash Flow</h4><p>Liquidity & working capital</p></button>
+                </div>
+            </div>
+        </div>
+        <div class="chat-input-wrapper">
+            <div id="attachment-preview-area" class="attachment-preview-container hidden"></div>
+            <div class="chat-input-container">
+                <div class="input-glow"></div>
+                <input type="file" id="file-upload" class="hidden" multiple onchange="handleFileSelect(event)" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.xlsx,.xls">
+                <button class="attach-btn" onclick="document.getElementById('file-upload').click()" title="Attach file or photo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <textarea id="user-input" class="chat-input" placeholder="Enter your financial data or ask a question..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                <button id="btn-send" class="send-btn" onclick="sendMessage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg></button>
+                <button id="btn-stop" class="send-btn hidden" style="background: var(--danger-color);" onclick="stopGeneration()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg></button>
+            </div>
+            <p class="input-disclaimer">Apex Financial Advisor · Free · Verify with a qualified professional</p>
+        </div>
+    </main>
+</div>
+
+<script>
+/* ==========================================
+   GOOGLE IDENTITY SERVICES (Real Google Sign-In)
+   ========================================== */
+const GOOGLE_CLIENT_ID = '679482367643-e7ihch7dtg43qseh2fluchct0ieklkaq.apps.googleusercontent.com';
+
+function initGoogleSignIn() {
+    if (typeof google === 'undefined' || !google.accounts) {
+        document.getElementById('google-btn-fallback').classList.remove('hidden');
+        return;
+    }
+    try {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredential,
+            auto_select: false,
+            context: 'signin'
+        });
+        google.accounts.id.renderButton(
+            document.getElementById('google-signin-container'),
+            { theme: 'outline', size: 'large', width: 364, text: 'continue_with', shape: 'rectangular', logo_alignment: 'left' }
+        );
+    } catch (e) {
+        document.getElementById('google-btn-fallback').classList.remove('hidden');
+    }
+}
+
+function handleGoogleCredential(response) {
+    const payload = decodeJWT(response.credential);
+    if (!payload) { showAuthError('Google sign-in failed. Try again.'); return; }
+
+    const user = {
+        name: payload.name,
+        email: payload.email,
+        picture: payload.picture || '',
+        provider: 'Google',
+        joined: new Date().toISOString(),
+        analyses: 0,
+        password: 'google-oauth'
+    };
+
+    const users = getUsers();
+    if (users[user.email]) {
+        users[user.email].picture = user.picture;
+        users[user.email].provider = 'Google';
+    } else {
+        users[user.email] = user;
+    }
+    saveUsers(users);
+    loginUser(users[user.email]);
+    closeAuthModal();
+}
+
+function decodeJWT(token) {
+    try {
+        const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+        return JSON.parse(atob(base64));
+    } catch (e) { return null; }
+}
+
+function googleFallback() {
+    if (GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
+        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+            'client_id=' + encodeURIComponent(GOOGLE_CLIENT_ID) +
+            '&redirect_uri=' + encodeURIComponent(window.location.origin + window.location.pathname) +
+            '&response_type=token' +
+            '&scope=openid%20email%20profile';
+        window.location.href = authUrl;
+        return;
+    }
+    const w=500,h=480,l=(screen.width-w)/2,t=(screen.height-h)/2;
+    const popup=window.open('','google_signin','width='+w+',height='+h+',left='+l+',top='+t+',toolbar=no,menubar=no');
+    if(!popup){showAuthError('Please allow popups.');return}
+    popup.document.write(`<!DOCTYPE html><html><head><title>Sign in – Google</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Google Sans','Segoe UI',Roboto,sans-serif;background:#f8f9fa;display:flex;align-items:center;justify-content:center;height:100vh}.c{background:#fff;border-radius:12px;padding:36px 40px;width:380px;box-shadow:0 1px 3px rgba(0,0,0,0.12)}.logo{text-align:center;margin-bottom:20px}.logo svg{width:72px}.t{text-align:center;font-size:22px;color:#202124;margin-bottom:4px;font-weight:400}.s{text-align:center;font-size:14px;color:#5f6368;margin-bottom:24px}label{font-size:12px;color:#5f6368;margin-bottom:4px;display:block;font-weight:500}input{width:100%;padding:11px 14px;border:1px solid #dadce0;border-radius:8px;font-size:14px;outline:none;margin-bottom:16px;font-family:inherit}input:focus{border-color:#1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,0.15)}.b{width:100%;padding:11px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}.b:hover{background:#1557b0}.e{color:#d93025;font-size:13px;margin-bottom:10px;display:none}.n{text-align:center;margin-top:16px;font-size:12px;color:#9aa0a6}</style></head><body><div class="c"><div class="logo"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></div><div class="t">Sign in</div><div class="s">to continue to Apex Financial Advisor</div><div class="e" id="e"></div><label>Your name</label><input id="n" placeholder="Enter your name" autofocus><label>Gmail address</label><input id="m" type="email" placeholder="you@gmail.com"><button class="b" onclick="go()">Next</button><p class="n">This signs you in to Apex Financial Advisor</p></div><script>function go(){var n=document.getElementById('n').value.trim(),m=document.getElementById('m').value.trim();if(!n||!m){document.getElementById('e').style.display='block';document.getElementById('e').textContent='Please fill in all fields';return}window.opener.postMessage({type:'google-auth',name:n,email:m,picture:''},'*');window.close()}<\/script></body></html>`);
+}
+
+let isSignUpMode = false;
+
+function login() {
+    if(currentUser){logout();return;}
+    document.getElementById('auth-modal').style.display = 'flex';
+}
+
+function toggleAuthMode() {
+    isSignUpMode = !isSignUpMode;
+    document.getElementById('auth-title').innerText = isSignUpMode ? 'Sign Up' : 'Welcome to Apex';
+    document.getElementById('auth-submit-btn').innerText = isSignUpMode ? 'Sign Up' : 'Sign In';
+    document.getElementById('auth-switch-btn').innerText = isSignUpMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
+    document.getElementById('auth-name').style.display = isSignUpMode ? 'block' : 'none';
+    document.getElementById('auth-error').style.display = 'none';
+}
+
+async function submitAuth() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value.trim();
+    const name = document.getElementById('auth-name').value.trim();
+    const errorEl = document.getElementById('auth-error');
+
+    if (!email || !password || (isSignUpMode && !name)) {
+        errorEl.innerText = "Please fill in all fields.";
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    const endpoint = isSignUpMode ? '/api/register' : '/api/login';
+    const payload = isSignUpMode ? { name, email, password } : { email, password };
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            if (isSignUpMode) {
+                isSignUpMode = false;
+                toggleAuthMode();
+                errorEl.style.color = '#10b981';
+                errorEl.innerText = "Registration successful! Please sign in.";
+                errorEl.style.display = 'block';
+            } else {
+                document.getElementById('auth-modal').style.display = 'none';
+                loginUser(data.user);
+            }
+        } else {
+            errorEl.style.color = '#ef4444';
+            errorEl.innerText = data.error || "Authentication failed.";
+            errorEl.style.display = 'block';
+        }
+    } catch (e) {
+        errorEl.style.color = '#ef4444';
+        errorEl.innerText = "Server connection error.";
+        errorEl.style.display = 'block';
+    }
+}
+
+function checkOAuthRedirect() {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const token = params.get('access_token');
+        if (token) {
+            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(r => r.json()).then(data => {
+                if (data.email) {
+                    const users = getUsers();
+                    const email = data.email.toLowerCase();
+                    if (!users[email]) {
+                        users[email] = { name: data.name||data.email, email, picture: data.picture||'', provider: 'Google', joined: new Date().toISOString(), analyses: 0, password: 'google-oauth' };
+                    } else {
+                        users[email].picture = data.picture || users[email].picture;
+                        users[email].provider = 'Google';
+                    }
+                    saveUsers(users);
+                    loginUser(users[email]);
+                }
+                history.replaceState(null, '', window.location.pathname);
+            }).catch(err => console.warn('OAuth userinfo failed:', err));
+        }
+    }
+}
+
+/* ====== AUTH SYSTEM ====== */
+let currentUser=null,analysisCount=0;
+function getUsers(){return JSON.parse(localStorage.getItem('afa_users')||'{}')}
+function saveUsers(u){localStorage.setItem('afa_users',JSON.stringify(u))}
+function setSession(u){localStorage.setItem('afa_session',JSON.stringify(u))}
+function getSession(){return JSON.parse(localStorage.getItem('afa_session')||'null')}
+function clearSession(){localStorage.removeItem('afa_session')}
+function hashPw(p){let h=0;for(let i=0;i<p.length;i++)h=((h<<5)-h+p.charCodeAt(i))|0;return'h_'+Math.abs(h).toString(36)+'_'+p.length}
+
+function handleUserClick(){currentUser?openAccountModal():openAuthModal()}
+function openAuthModal(){document.getElementById('auth-modal').classList.remove('hidden');hideAuthMsg();initGoogleSignIn()}
+function closeAuthModal(){document.getElementById('auth-modal').classList.add('hidden')}
+function openAccountModal(){updateUserUI();document.getElementById('account-modal').classList.remove('hidden');document.getElementById('sidebar').classList.remove('open')}
+function closeAccountModal(){document.getElementById('account-modal').classList.add('hidden')}
+function switchAuthTab(t){document.getElementById('tab-signin').classList.toggle('active',t==='signin');document.getElementById('tab-signup').classList.toggle('active',t==='signup');document.getElementById('form-signin').classList.toggle('hidden',t!=='signin');document.getElementById('form-signup').classList.toggle('hidden',t!=='signup');hideAuthMsg()}
+function showAuthError(m){const e=document.getElementById('auth-error');e.textContent=m;e.classList.add('show');document.getElementById('auth-success').classList.remove('show')}
+function showAuthSuccess(m){const e=document.getElementById('auth-success');e.textContent=m;e.classList.add('show');document.getElementById('auth-error').classList.remove('show')}
+function hideAuthMsg(){document.getElementById('auth-error').classList.remove('show');document.getElementById('auth-success').classList.remove('show')}
+function togglePw(id,btn){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';btn.textContent=i.type==='password'?'👁️':'🙈'}
+
+function handleSignUp(e){e.preventDefault();hideAuthMsg();const name=document.getElementById('signup-name').value.trim(),email=document.getElementById('signup-email').value.trim().toLowerCase(),pw=document.getElementById('signup-password').value;if(pw.length<6)return showAuthError('Password must be at least 6 characters.');const users=getUsers();if(users[email])return showAuthError('Account exists. Sign in instead.');users[email]={name,email,password:hashPw(pw),joined:new Date().toISOString(),analyses:0,provider:'Email',picture:''};saveUsers(users);showAuthSuccess('Account created!');setTimeout(()=>{loginUser(users[email]);closeAuthModal()},600)}
+function handleSignIn(e){e.preventDefault();hideAuthMsg();const email=document.getElementById('signin-email').value.trim().toLowerCase(),pw=document.getElementById('signin-password').value;const users=getUsers(),user=users[email];if(!user)return showAuthError('No account found. Sign up first.');if(user.password!=='google-oauth'&&user.password!==hashPw(pw))return showAuthError('Incorrect password.');loginUser(user);closeAuthModal()}
+
+function loginUser(user){currentUser=user;analysisCount=user.analyses||0;setSession(user);updateUserUI();userInput.focus()}
+
+function updateUserUI(){
+    const sa=document.getElementById('sidebar-avatar'),sn=document.getElementById('sidebar-name'),se=document.getElementById('sidebar-email');
+    const ha=document.getElementById('header-avatar'),ht=document.getElementById('header-user-text');
+    if(currentUser){
+        const initials=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+        if(currentUser.picture){sa.innerHTML=`<img src="${currentUser.picture}" alt="">`;sa.className='sidebar-user-avatar'}
+        else{sa.textContent=initials;sa.className='sidebar-user-avatar gradient-bg';sa.innerHTML=initials}
+        sn.textContent=currentUser.name;se.textContent=currentUser.email;
+        if(currentUser.picture){ha.innerHTML=`<img src="${currentUser.picture}" alt="">`;ha.className='signin-chip-avatar loggedin'}
+        else{ha.textContent=initials;ha.className='signin-chip-avatar loggedin';ha.innerHTML=initials}
+        ht.textContent=currentUser.name.split(' ')[0];
+        const ma=document.getElementById('modal-avatar');
+        if(currentUser.picture){ma.innerHTML=`<img src="${currentUser.picture}" alt="">`;ma.className='account-avatar'}
+        else{ma.textContent=initials;ma.className='account-avatar gradient-bg'}
+        document.getElementById('modal-name').textContent=currentUser.name;
+        document.getElementById('modal-email').textContent=currentUser.email;
+        document.getElementById('modal-provider').textContent=(currentUser.provider||'Email');
+        const badge=document.getElementById('modal-badge');
+        badge.textContent=currentUser.provider==='Google'?'Google Account':'Email Account';
+        badge.className=currentUser.provider==='Google'?'account-badge google-badge':'account-badge email-badge';
+        document.getElementById('modal-joined').textContent=new Date(currentUser.joined).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+        document.getElementById('modal-analyses').textContent=analysisCount;
+    }else{
+        sa.className='sidebar-user-avatar guest-bg';sa.innerHTML='👤';
+        sn.textContent='Guest User';se.textContent='Tap to sign in';
+        ha.className='signin-chip-avatar guest';ha.innerHTML='👤';ht.textContent='Sign In';
+    }
+}
+
+function handleLogout(){
+    if(currentUser && currentUser.provider==='Google' && typeof google!=='undefined' && google.accounts){
+        google.accounts.id.disableAutoSelect();
+    }
+    clearSession();currentUser=null;chatHistory=[];closeAccountModal();updateUserUI()
+}
+function incrementAnalysis(){analysisCount++;if(currentUser){const u=getUsers();if(u[currentUser.email]){u[currentUser.email].analyses=analysisCount;saveUsers(u)}currentUser.analyses=analysisCount;setSession(currentUser)}}
+
+window.onload=function(){
+    checkOAuthRedirect();
+    initGoogleSignIn();
+
+    const s=getSession();if(s){const u=getUsers();if(u[s.email])loginUser(u[s.email])}
+    updateUserUI();
+};
+
+/* ====== CHAT ENGINE ====== */
+let chatHistory=[],isProcessing=false,pendingAttachments=[],abortController=null;
+const chatMessages=document.getElementById('chat-messages'),userInput=document.getElementById('user-input'),welcomeScreen=document.getElementById('welcome-screen'),sendBtn=document.getElementById('btn-send'),stopBtn=document.getElementById('btn-stop');
+function getTimestamp(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+function escapeHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,150)+'px'}
+function scrollToBottom(){chatMessages.scrollTo({top:chatMessages.scrollHeight,behavior:'smooth'})}
+function parseNumber(s){if(s==null)return NaN;s=String(s).trim().toLowerCase();let m=1;if(s.endsWith('k')){m=1e3;s=s.slice(0,-1)}else if(s.endsWith('m')){m=1e6;s=s.slice(0,-1)}else if(s.endsWith('b')){m=1e9;s=s.slice(0,-1)}else if(/crores?|cr$/.test(s)){m=1e7;s=s.replace(/crores?|cr/g,'')}else if(/lakhs?|l$/.test(s)){m=1e5;s=s.replace(/lakhs?|l$/g,'')}s=s.replace(/[$₹€£,\s]/g,'');const n=parseFloat(s);return isNaN(n)?NaN:n*m}
+function formatCurrency(n){if(isNaN(n))return'N/A';const a=Math.abs(n),s=n<0?'-':'';if(a>=1e9)return s+'$'+(a/1e9).toFixed(2)+'B';if(a>=1e6)return s+'$'+(a/1e6).toFixed(2)+'M';if(a>=1e3)return s+'$'+(a/1e3).toFixed(1)+'K';return s+'$'+a.toFixed(0)}
+function formatPercent(n){return isNaN(n)?'N/A':n.toFixed(1)+'%'}
+function metricClass(v,g,b,h=true){if(isNaN(v))return'metric-neutral';if(h)return v>=g?'metric-positive':v<=b?'metric-negative':'metric-neutral';return v<=g?'metric-positive':v>=b?'metric-negative':'metric-neutral'}
+function useTemplate(t){const m={'health-check':'Revenue: $\nCOGS: $\nOperating Expenses: $\nCash Balance: $','ratio-analysis':'Revenue: $\nNet Income: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $','cash-flow':'Cash Balance: $\nMonthly Revenue: $\nMonthly Expenses: $','scenario':'Revenue: $50K\nCOGS: $20K\nOpex: $25K\n\nWhat if revenue increases by 20%?','cost-reduction':'Revenue: $\nCOGS: $\nOperating Expenses: $\nEmployees: \nMonthly Burn: $','compliance':'Revenue: $\nTotal Assets: $\nTotal Liabilities: $\nEquity: $\nCurrent Assets: $\nCurrent Liabilities: $'};userInput.value=m[t]||'';userInput.focus();autoResize(userInput);document.getElementById('sidebar').classList.remove('open')}
+
+// ============================================================
+// FILE UPLOAD SAFETY
+// ============================================================
+const ALLOWED_FILE_TYPES = {
+    'application/pdf': {ext: '.pdf', maxSizeMB: 25},
+    'image/png': {ext: '.png', maxSizeMB: 10},
+    'image/jpeg': {ext: '.jpg', maxSizeMB: 10},
+    'image/gif': {ext: '.gif', maxSizeMB: 5},
+    'image/webp': {ext: '.webp', maxSizeMB: 10},
+    'text/plain': {ext: '.txt', maxSizeMB: 5},
+    'text/csv': {ext: '.csv', maxSizeMB: 10},
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {ext: '.xlsx', maxSizeMB: 15},
+    'application/vnd.ms-excel': {ext: '.xls', maxSizeMB: 15},
+};
+const BLOCKED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.js', '.vbs', '.msi', '.dll', '.sys', '.com', '.scr', '.pif', '.jar', '.py', '.rb', '.php', '.pl', '.cgi'];
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB absolute max
+const MAX_FILES_AT_ONCE = 5;
+
+function validateFile(file) {
+    const errors = [];
+    const fileName = file.name.toLowerCase();
+    const fileExt = '.' + fileName.split('.').pop();
+    
+    // 1. Check blocked extensions (not just MIME type)
+    if (BLOCKED_EXTENSIONS.includes(fileExt)) {
+        errors.push(`Blocked file type: ${fileExt} files are not allowed for security.`);
+        return errors;
+    }
+    
+    // 2. Validate MIME type (content-based, not just extension)
+    const allowedType = ALLOWED_FILE_TYPES[file.type];
+    if (!allowedType && !file.type.startsWith('image/') && !file.type.startsWith('text/')) {
+        errors.push(`Unsupported file type: ${file.type || 'unknown'}. Allowed: PDF, Images, CSV, Excel, Text.`);
+        return errors;
+    }
+    
+    // 3. Check file size
+    const maxSize = allowedType ? allowedType.maxSizeMB * 1024 * 1024 : MAX_FILE_SIZE_BYTES;
+    if (file.size > maxSize) {
+        const limitMB = allowedType ? allowedType.maxSizeMB : 25;
+        errors.push(`File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB (max ${limitMB}MB for ${fileExt}).`);
+    }
+    
+    // 4. Check for empty files
+    if (file.size === 0) {
+        errors.push(`Empty file: ${file.name} has no content.`);
+    }
+    
+    // 5. Validate filename (no path traversal)
+    if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+        errors.push(`Invalid filename: contains forbidden characters.`);
+    }
+    
+    // 6. Filename length
+    if (file.name.length > 255) {
+        errors.push(`Filename too long (max 255 characters).`);
+    }
+    
+    return errors;
+}
+
+async function handleFileSelect(e){
+    const files=Array.from(e.target.files);
+    
+    // Limit number of files at once
+    if (files.length > MAX_FILES_AT_ONCE) {
+        addMessage(`<div class="warning-box"><p>⚠️ Too many files. Maximum ${MAX_FILES_AT_ONCE} files at once.</p></div>`, false);
+        e.target.value='';
+        return;
+    }
+    
+    for(const file of files){
+        // SECURITY: Validate every file before processing
+        const validationErrors = validateFile(file);
+        if (validationErrors.length > 0) {
+            addMessage(`<div class="danger-box"><h4>🔒 File Rejected: ${escapeHtml(file.name)}</h4><p>${validationErrors.join('<br>')}</p></div>`, false);
+            continue;
+        }
+        
+        const isImage=file.type.startsWith('image/');
+        const isPdf=file.type==='application/pdf';
+        const att={name:file.name.slice(0, 255),type:file.type,isImage,data:'',extractedText:''};
+        
+        if(isImage){
+            const reader=new FileReader();
+            reader.onload=(evt)=>{att.data=evt.target.result;pendingAttachments.push(att);renderAttachmentPreviews()};
+            reader.readAsDataURL(file);
+        } else if(isPdf && typeof pdfjsLib!=='undefined'){
+            pendingAttachments.push(att);
+            renderAttachmentPreviews();
+            isProcessing=true;
+            sendBtn.disabled=true;
+            addTyping();
+            const reader=new FileReader();
+            reader.onload=async (evt)=>{
+                try{
+                    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    const typedarray=new Uint8Array(evt.target.result);
+                    
+                    // SECURITY: Validate PDF magic bytes (content validation, not just extension)
+                    if (typedarray.length < 5 || String.fromCharCode(...typedarray.slice(0,5)) !== '%PDF-') {
+                        throw new Error('Invalid PDF: file content does not match PDF format.');
+                    }
+                    
+                    const pdf=await pdfjsLib.getDocument(typedarray).promise;
+                    let fullText='';
+                    for(let i=1;i<=pdf.numPages;i++){
+                        const page=await pdf.getPage(i);
+                        const textContent=await page.getTextContent();
+                        fullText+=textContent.items.map(item=>item.str).join(' ')+' \n';
+                    }
+                    // SECURITY: Truncate extracted text to prevent payload bombs
+                    att.extractedText=fullText.slice(0, 500000);
+                }catch(err){
+                    console.error('PDF parse error:',err);
+                    addMessage(`<div class="danger-box"><p>Failed to parse PDF: ${escapeHtml(err.message || 'Unknown error')}</p></div>`, false);
+                }finally{
+                    isProcessing=false;
+                    sendBtn.disabled=false;
+                    removeTyping();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            const reader=new FileReader();
+            reader.onload=(evt)=>{
+                // SECURITY: Truncate text content
+                att.extractedText=(evt.target.result || '').slice(0, 500000);
+                pendingAttachments.push(att);
+                renderAttachmentPreviews();
+            };
+            reader.readAsText(file);
+        }
+    }
+    e.target.value='';
+}
+function removeAttachment(index){pendingAttachments.splice(index,1);renderAttachmentPreviews()}
+function renderAttachmentPreviews(){
+    const area=document.getElementById('attachment-preview-area');
+    if(pendingAttachments.length===0){area.classList.add('hidden');area.innerHTML='';return}
+    area.classList.remove('hidden');
+    area.innerHTML=pendingAttachments.map((att,i)=>`<div class="attachment-preview">${att.isImage?`<img src="${att.data}" alt="preview">`:`<div class="file-icon">📄</div>`}<button class="remove-attachment" onclick="removeAttachment(${i})">✕</button></div>`).join('');
+}
+
+let chartCounter = 0;
+function addMessage(c,isUser=false,attachments=[]){
+    if(welcomeScreen)welcomeScreen.classList.add('hidden');
+    const d=document.createElement('div');
+    d.className=`message ${isUser?'message-user':'message-ai'}`;
+    
+    let avatarHTML='◆';
+    if(isUser){
+        if(currentUser&&currentUser.picture)avatarHTML=`<img src="${currentUser.picture}" alt="">`;
+        else if(currentUser)avatarHTML=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+        else avatarHTML='👤';
+    }
+    
+    let attachHTML='';
+    if(attachments&&attachments.length>0){
+        attachHTML=`<div class="message-attachments">`+attachments.map(a=>a.isImage?`<img src="${a.data}" class="msg-attachment-img">`:`<div class="msg-attachment-file">📄 ${escapeHtml(a.name)}</div>`).join('')+`</div>`;
+    }
+    
+    // Process markdown and intercept ```chart blocks
+    let parsedContent = '';
+    const chartConfigs = [];
+    
+    if (isUser) {
+        parsedContent = escapeHtml(c);
+    } else {
+        // Regex to find ```chart ... ```
+        const chartRegex = /```chart\s*([\s\S]*?)\s*```/g;
+        let modifiedMarkdown = c.replace(chartRegex, (match, jsonStr) => {
+            chartCounter++;
+            const canvasId = `ai-chart-${chartCounter}`;
+            try {
+                const config = JSON.parse(jsonStr);
+                chartConfigs.push({ id: canvasId, config: config });
+                return `<div class="chart-container" style="position: relative; width: 100%; height: 300px; margin: 15px 0;"><canvas id="${canvasId}"></canvas></div>`;
+            } catch (e) {
+                console.error("Chart parse error:", e);
+                return `[Error rendering chart: Invalid JSON]`;
+            }
+        });
+        parsedContent = marked.parse(modifiedMarkdown);
+    }
+
+    d.innerHTML=`<div class="message-avatar">${avatarHTML}</div><div class="message-content"><div class="message-bubble markdown-body">${attachHTML}${parsedContent}</div><div class="message-timestamp">${getTimestamp()}</div></div>`;
+    chatMessages.appendChild(d);
+    
+    // Render charts after they are added to the DOM
+    chartConfigs.forEach(chartData => {
+        const ctx = document.getElementById(chartData.id);
+        if (ctx) {
+            // Apply dark theme defaults if missing
+            if (chartData.config.options === undefined) chartData.config.options = {};
+            if (chartData.config.options.plugins === undefined) chartData.config.options.plugins = {};
+            if (chartData.config.options.plugins.legend === undefined) {
+                chartData.config.options.plugins.legend = { labels: { color: '#e2e8f0' } };
+            }
+            if (chartData.config.options.scales) {
+                if(chartData.config.options.scales.x) chartData.config.options.scales.x.ticks = {color: '#94a3b8'};
+                if(chartData.config.options.scales.y) chartData.config.options.scales.y.ticks = {color: '#94a3b8'};
+            } else {
+                chartData.config.options.scales = {
+                    x: { ticks: { color: '#94a3b8' } },
+                    y: { ticks: { color: '#94a3b8' } }
+                };
+            }
+            
+            new Chart(ctx, chartData.config);
+        }
+    });
+    
+    scrollToBottom();
+}
+function addTyping(){const d=document.createElement('div');d.className='message message-ai';d.id='typing-indicator';d.innerHTML=`<div class="message-avatar">◆</div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;chatMessages.appendChild(d);scrollToBottom()}
+function removeTyping(){const e=document.getElementById('typing-indicator');if(e)e.remove()}
+function stopGeneration() {
+    if(abortController) {
+        abortController.abort();
+        abortController = null;
+    }
+}
+
+async function sendMessage(){
+    const t=userInput.value.trim();
+    if((!t&&pendingAttachments.length===0)||isProcessing)return;
+    isProcessing=true;sendBtn.classList.add('hidden');stopBtn.classList.remove('hidden');
+    const atts=[...pendingAttachments];
+    addMessage(t,true,atts);
+    
+    // Save to history before sending
+    chatHistory.push({role:'user',content:t,attachments:atts});
+    
+    userInput.value='';pendingAttachments=[];renderAttachmentPreviews();autoResize(userInput);
+    addTyping();
+    
+    abortController = new AbortController();
+    
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            signal: abortController.signal,
+            body: JSON.stringify({
+                message: t,
+                history: chatHistory.slice(0, -1), // Send history excluding the current message
+                attachments: atts
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const resp = data.response;
+        
+        removeTyping();
+        addMessage(resp,false);
+        chatHistory.push({role:'assistant',content:resp});
+        incrementAnalysis();
+        
+    } catch (error) {
+        console.error("Chat API error:", error);
+        removeTyping();
+        if(error.name === 'AbortError') {
+            const errorMsg = `<div class="warning-box"><p>Generation stopped by user.</p></div>`;
+            addMessage(errorMsg, false);
+            chatHistory.push({role:'assistant',content:errorMsg});
+        } else {
+            const errorMsg = `<div class="danger-box"><h4>Connection Error</h4><p>Could not connect to the local AI backend. The AI might be taking a very long time to read the PDF, or the Python server on port 5001 is not running.</p></div>`;
+            addMessage(errorMsg, false);
+            chatHistory.push({role:'assistant',content:errorMsg});
+        }
+    }
+    
+    isProcessing=false;stopBtn.classList.add('hidden');sendBtn.classList.remove('hidden');sendBtn.disabled=false;userInput.focus();
+    abortController = null;
+}
+function handleKeyDown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
+function startNewChat(){chatHistory=[];chatMessages.innerHTML='';if(welcomeScreen){chatMessages.appendChild(welcomeScreen);welcomeScreen.classList.remove('hidden')}userInput.value='';userInput.focus()}
+function clearChat(){startNewChat()}
+function exportChat(){if(!chatHistory.length)return;let t='══ APEX FINANCIAL ADVISOR ══\n'+new Date().toLocaleString()+'\nUser: '+(currentUser?currentUser.name+' ('+currentUser.email+')':'Guest')+'\n\n';for(const m of chatHistory)t+=`${m.role==='user'?'📝 USER':'◆ APEX'}:\n${m.content.replace(/<[^>]*>/g,'')}\n\n---\n\n`;const b=new Blob([t],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=`apex-report-${new Date().toISOString().slice(0,10)}.txt`;a.click();URL.revokeObjectURL(u)}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+document.addEventListener('click',e=>{const s=document.getElementById('sidebar'),t=document.getElementById('sidebar-toggle');if(window.innerWidth<=768&&s.classList.contains('open')&&!s.contains(e.target)&&!t.contains(e.target))s.classList.remove('open')});
+userInput.focus();
+</script>
+
+<div id="auth-modal" class="auth-modal-overlay" style="display: none;">
+    <div class="auth-modal">
+        <h2 id="auth-title">Sign In</h2>
+        <div id="auth-error" class="auth-error"></div>
+        <input type="text" id="auth-name" placeholder="Your Name" style="display: none;">
+        <input type="email" id="auth-email" placeholder="Email Address">
+        <input type="password" id="auth-password" placeholder="Password">
+        <button id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
+        <div class="auth-switch" id="auth-switch-btn" onclick="toggleAuthMode()">Don't have an account? Sign Up</div>
+    </div>
+</div>
+</body>
+</html>
