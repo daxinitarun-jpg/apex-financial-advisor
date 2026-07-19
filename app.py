@@ -18,7 +18,7 @@ import os
 import time
 import logging
 import re
-import google.generativeai as genai
+from groq import Groq
 from collections import defaultdict
 from functools import wraps
 import sqlite3
@@ -211,9 +211,8 @@ def sanitize_text(text):
 # All configuration loaded from environment variables or config.
 # NO hardcoded API keys, tokens, or passwords in source code.
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SERVER_PORT = int(os.environ.get("APEX_PORT", "5001"))
 SERVER_HOST = os.environ.get("APEX_HOST", "0.0.0.0")
@@ -439,19 +438,31 @@ def chat():
             else:
                 print("  ℹ️ No numerical data found for algorithms")
 
-        if not GEMINI_API_KEY:
-            logger.error("GEMINI_API_KEY is not set.")
-            return jsonify({"error": "Server configuration error: Missing Gemini API Key. Please configure GEMINI_API_KEY in the environment."}), 500
+        if not GROQ_API_KEY or not groq_client:
+            logger.error("GROQ_API_KEY is not set.")
+            return jsonify({"error": "Server configuration error: Missing Groq API Key. Please configure GROQ_API_KEY in the environment."}), 500
 
         try:
-            print("  🤖 Calling Google Gemini API...")
-            model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                system_instruction=SYSTEM_PROMPT
+            print("  🤖 Calling Groq (Llama 3) API...")
+            
+            chat_completion = groq_client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": SYSTEM_PROMPT
+                    },
+                    {
+                        "role": "user",
+                        "content": final_prompt
+                    }
+                ],
+                model="llama3-8b-8192",
+                temperature=0.7,
+                max_tokens=4096,
+                stream=False
             )
             
-            response = model.generate_content(final_prompt)
-            ai_text = response.text
+            ai_text = chat_completion.choices[0].message.content
             
             # Clean up markdown blocks if model outputs them
             ai_text = ai_text.strip()
@@ -463,16 +474,16 @@ def chat():
                 ai_text = ai_text[:-3]
             ai_text = ai_text.strip()
             
-            print("  ✅ Success with Gemini API")
+            print("  ✅ Success with Groq API")
             return jsonify({
                 "response": ai_text,
                 "algorithms_used": algorithms_used
             })
             
         except Exception as e:
-            logger.error(f"Gemini API exception: {str(e)}")
-            print(f"  ❌ Gemini API failed: {str(e)}")
-            return jsonify({"error": "Unable to process your request with Gemini API. Please try again."}), 500
+            logger.error(f"Groq API exception: {str(e)}")
+            print(f"  ❌ Groq API failed: {str(e)}")
+            return jsonify({"error": "Unable to process your request with Groq API. Please try again."}), 500
 
     except Exception as e:
         # SECURITY 4: Never expose stack traces or internal paths to users
@@ -521,11 +532,11 @@ if __name__ == '__main__':
     print("     ✅ Security Headers (XSS, clickjacking, CSRF)")
     print("=" * 55)
     
-    # Check if Gemini API is configured
-    if GEMINI_API_KEY:
-        print("  ✅ Google Gemini API Key: CONFIGURED")
+    # Check if Groq API is configured
+    if GROQ_API_KEY:
+        print("  ✅ Groq API Key: CONFIGURED")
     else:
-        print("  ⚠️  Google Gemini API Key: NOT FOUND (Requires GEMINI_API_KEY env var)")
+        print("  ⚠️  Groq API Key: NOT FOUND (Requires GROQ_API_KEY env var)")
     
     print(f"  🧠 15 ML Algorithms: LOADED")
     print(f"  🚀 Server starting on http://localhost:{SERVER_PORT}")
